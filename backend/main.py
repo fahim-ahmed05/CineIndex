@@ -42,7 +42,7 @@ _________ .__              .___            .___
 """
     print(banner)
     print(
-        "CineIndex - LAN media indexer, fuzzy search, mpv frontend, aria2 downloader\n"
+        "A fast terminal-based media indexer and player for directory-style servers\n"
     )
 
 
