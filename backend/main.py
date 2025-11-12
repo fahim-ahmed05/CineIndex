@@ -534,7 +534,7 @@ def download_index() -> None:
 # ---------- Menu ----------
 
 def print_menu() -> None:
-    print(Fore.MAGENTA + Style.BRIGHT + "\n=== CineIndex TUI ===\n")
+    print(Fore.MAGENTA + Style.BRIGHT + "=== CineIndex TUI ===\n")
     print(Fore.YELLOW + "1." + Style.RESET_ALL + " Build index (full crawl)")
     print(Fore.YELLOW + "2." + Style.RESET_ALL + " Update index (incremental)")
     print(Fore.YELLOW + "3." + Style.RESET_ALL + " Show stats")
