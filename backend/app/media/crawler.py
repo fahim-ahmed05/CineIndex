@@ -5,11 +5,13 @@ from typing import Iterable, Optional, List, Tuple
 from pathlib import Path
 from urllib.parse import urlparse
 import time
-
 import requests
+from colorama import Fore, Style, init
 
 from ..db import get_conn
 from .parser import parse_directory_page
+
+init(autoreset=True)
 
 
 @dataclass
@@ -25,9 +27,7 @@ class CrawlConfig:
 
 
 def normalize_root_url(url: str) -> str:
-    """
-    Ensure root URL ends with a slash.
-    """
+    """Ensure root URL ends with a slash."""
     return url.rstrip("/") + "/"
 
 
@@ -76,7 +76,7 @@ def _should_keep_file(filename: str, cfg: CrawlConfig) -> bool:
     dot = lower.rfind(".")
     if dot == -1:
         return False
-    ext = lower[dot + 1 :]
+    ext = lower[dot + 1:]
     return ext in cfg.video_exts
 
 
@@ -89,8 +89,9 @@ def _make_session(root_cfg: RootConfig) -> requests.Session:
         try:
             cj.load(str(root_cfg.cookie_file), ignore_discard=True, ignore_expires=True)
             s.cookies = cj
+            print(Fore.GREEN + f"[COOKIE] Loaded {root_cfg.cookie_file}")
         except Exception as e:
-            print(f"[CRAWL] Warning: failed to load cookie file {root_cfg.cookie_file}: {e}")
+            print(Fore.YELLOW + f"[COOKIE] Warning: failed to load cookie file {root_cfg.cookie_file}: {e}")
     return s
 
 
@@ -100,7 +101,7 @@ def _fetch_page(session: requests.Session, url: str) -> Optional[str]:
         resp.raise_for_status()
         return resp.text
     except Exception as e:
-        print(f"[CRAWL] Error fetching {url}: {e}")
+        print(Fore.RED + f"[CRAWL] Error fetching {url}: {e}")
         return None
 
 
@@ -110,6 +111,10 @@ def crawl_root(
     conn=None,
     incremental: bool = False,
 ) -> None:
+    """
+    Crawl a single root directory and update the local database.
+    Includes colored progress output for clarity.
+    """
     own_conn = False
     if conn is None:
         conn = get_conn()
@@ -121,19 +126,17 @@ def crawl_root(
         cur = conn.cursor()
 
         if not incremental:
-            print(f"[BUILD] Clearing existing index for root {root_cfg.url}")
+            print(Fore.CYAN + f"[BUILD] Clearing existing index for {root_cfg.url}")
             cur.execute("DELETE FROM media WHERE root = ?", (root_cfg.url,))
             cur.execute("DELETE FROM dirs WHERE root = ?", (root_cfg.url,))
             conn.commit()
 
-        queue: List[Tuple[str, Optional[str]]] = []
-        queue.append((root_cfg.url, None))
-
+        queue: List[Tuple[str, Optional[str]]] = [(root_cfg.url, None)]
         processed_dirs = 0
         inserted_files = 0
         skipped_dirs = 0
 
-        print(f"[CRAWL] Starting crawl for {root_cfg.url}")
+        print(Fore.MAGENTA + f"[CRAWL] Starting crawl for {root_cfg.url}")
         t0 = time.time()
 
         while queue:
@@ -141,7 +144,7 @@ def crawl_root(
             rel_path = _path_from_root(root_cfg.url, dir_url)
 
             if _is_blocked_dir(rel_path, cfg):
-                print(f"[CRAWL] Skipping blocked dir: {rel_path} ({dir_url})")
+                print(Fore.YELLOW + f"[SKIP] Blocked dir: {rel_path}")
                 continue
 
             html = _fetch_page(session, dir_url)
@@ -152,10 +155,7 @@ def crawl_root(
 
             dir_modified = parsed.dir_modified
             if incremental:
-                cur.execute(
-                    "SELECT modified FROM dirs WHERE url = ?",
-                    (dir_url,),
-                )
+                cur.execute("SELECT modified FROM dirs WHERE url = ?", (dir_url,))
                 row = cur.fetchone()
                 if row is not None and row["modified"] == dir_modified:
                     skipped_dirs += 1
@@ -208,18 +208,28 @@ def crawl_root(
             inserted_files += batch_files
             processed_dirs += 1
 
-            print(f"[DIR] {dir_url}")
-            print(f"  - found {batch_files} files, {len(parsed.subdirs)} subdirs.")
+            print(Fore.CYAN + f"[DIR] {dir_url}")
+            print(
+                Fore.GREEN
+                + f"  - found {batch_files} files"
+                + Fore.YELLOW
+                + f", {len(parsed.subdirs)} subdirs"
+            )
 
             for d in parsed.subdirs:
                 queue.append((d.url, dir_url))
 
             if processed_dirs % 20 == 0:
                 conn.commit()
+                print(Style.DIM + f"  ...progress: {processed_dirs} dirs processed...")
 
         conn.commit()
         elapsed = time.time() - t0
-        print(f"[CRAWL] Done {root_cfg.url}: dirs={processed_dirs}, skipped={skipped_dirs}, files={inserted_files}, time={elapsed:.1f}s\n")
+        print(
+            Fore.MAGENTA
+            + f"[DONE] {root_cfg.url} → dirs={processed_dirs}, skipped={skipped_dirs}, "
+            + f"files={inserted_files}, time={elapsed:.1f}s\n"
+        )
     finally:
         if own_conn:
             conn.close()
