@@ -1,7 +1,7 @@
 [project]
 name = "cineindex"
 version = "0.1.0"
-description = "CineIndex - LAN media indexer, fuzzy search, mpv player frontend, and aria2 downloader."
+description = "A fast terminal-based media indexer and player for directory-style servers."
 requires-python = ">=3.11"
 dependencies = [
     "requests>=2.32.0",
