@@ -345,6 +345,7 @@ def download_entry(entry: MediaEntry) -> None:
 
 
 def build_index() -> None:
+    print(Fore.MAGENTA + "\n=== CineIndex Build ===\n")
     print(Fore.CYAN + "[BUILD] Starting full index build...")
     init_db()
     roots_raw = load_roots_config()
@@ -364,6 +365,7 @@ def build_index() -> None:
 
 
 def update_index() -> None:
+    print(Fore.MAGENTA + "\n=== CineIndex Update ===\n")
     print(Fore.CYAN + "[UPDATE] Checking modified roots...")
     init_db()
     roots_raw = load_roots_config()
@@ -383,7 +385,8 @@ def update_index() -> None:
 
 
 def show_stats() -> None:
-    print(Fore.CYAN + "[STATS] Gathering database stats...")
+    print(Fore.MAGENTA + f"\n=== CineIndex Stats ===")
+    print(Fore.CYAN + "\n[STATS] Gathering database stats...\n")
     init_db()
     conn = get_conn()
     try:
@@ -392,7 +395,6 @@ def show_stats() -> None:
         dirs_count = cur.fetchone()[0]
         cur.execute("SELECT COUNT(*) FROM media")
         media_count = cur.fetchone()[0]
-        print(Fore.MAGENTA + f"\n=== CineIndex Stats ===")
         print(Fore.GREEN + f"Directories: {dirs_count}")
         print(Fore.GREEN + f"Media Files: {media_count}\n")
     finally:
@@ -405,6 +407,7 @@ def show_stats() -> None:
 def search_index() -> None:
     init_db()
     conn = get_conn()
+    print(Fore.MAGENTA + "\n=== CineIndex Stream ===")
     try:
         print(Fore.CYAN + "\n[SEARCH] Loading media entries...")
         entries = load_media_entries(conn)
@@ -415,10 +418,11 @@ def search_index() -> None:
 
         choices = build_choice_list(entries)
         root_tags = build_root_tag_map()
-        print(Fore.CYAN + "Type a search query (ENTER to return):\n")
 
         while True:
-            pattern = input(Fore.YELLOW + "CineIndex search> ").strip()
+            pattern = input(
+                Fore.YELLOW + "Type a search query (ENTER to return): "
+            ).strip()
             if not pattern:
                 print()
                 return
@@ -476,7 +480,7 @@ def show_history() -> None:
             return
 
         root_tags = build_root_tag_map()
-        print(Fore.MAGENTA + "\n=== CineIndex Watch History (last 50) ===\n")
+        print(Fore.MAGENTA + "\n=== CineIndex Watch History ===\n")
 
         for i in reversed(range(len(history))):
             entry, played_at = history[i]
@@ -515,6 +519,7 @@ def show_history() -> None:
 def download_index() -> None:
     init_db()
     conn = get_conn()
+    print(Fore.MAGENTA + "\n=== CineIndex Download ===")
     try:
         print(Fore.CYAN + "\n[DL] Loading media entries...")
         entries = load_media_entries(conn)
@@ -525,10 +530,9 @@ def download_index() -> None:
 
         choices = build_choice_list(entries)
         root_tags = build_root_tag_map()
-        print(Fore.CYAN + "Type a search pattern (ENTER to return):\n")
 
         while True:
-            pattern = input(Fore.YELLOW + "CineIndex download> ").strip()
+            pattern = input(Fore.YELLOW + "Type a search pattern (ENTER to return): ").strip()
             if not pattern:
                 print()
                 return
