@@ -3,7 +3,6 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Iterable, Optional, List, Tuple
 from pathlib import Path
-from urllib.parse import urlparse
 import time
 import requests
 from colorama import Fore, Style, init
@@ -17,7 +16,6 @@ init(autoreset=True)
 @dataclass
 class RootConfig:
     url: str
-    cookie_file: Optional[Path]
 
 
 @dataclass
@@ -32,19 +30,18 @@ def normalize_root_url(url: str) -> str:
 
 
 def load_root_configs(raw_roots: Iterable[dict], backend_root: Path) -> List[RootConfig]:
+    """
+    Build RootConfig objects from roots.json entries.
+
+    Cookie support removed: we only care about the 'url' now.
+    """
     roots: List[RootConfig] = []
     for r in raw_roots:
         url = r.get("url", "").strip()
         if not url:
             continue
         url = normalize_root_url(url)
-        cookie_val = (r.get("cookie") or "").strip()
-        cookie_file: Optional[Path] = None
-        if cookie_val:
-            cookie_file = Path(cookie_val).expanduser()
-            if not cookie_file.is_absolute():
-                cookie_file = backend_root / cookie_file
-        roots.append(RootConfig(url=url, cookie_file=cookie_file))
+        roots.append(RootConfig(url=url))
     return roots
 
 
@@ -81,18 +78,12 @@ def _should_keep_file(filename: str, cfg: CrawlConfig) -> bool:
 
 
 def _make_session(root_cfg: RootConfig) -> requests.Session:
-    s = requests.Session()
-    if root_cfg.cookie_file and root_cfg.cookie_file.exists():
-        from http.cookiejar import MozillaCookieJar
+    """
+    Create a plain requests.Session.
 
-        cj = MozillaCookieJar()
-        try:
-            cj.load(str(root_cfg.cookie_file), ignore_discard=True, ignore_expires=True)
-            s.cookies = cj
-            print(Fore.GREEN + f"[COOKIE] Loaded {root_cfg.cookie_file}")
-        except Exception as e:
-            print(Fore.YELLOW + f"[COOKIE] Warning: failed to load cookie file {root_cfg.cookie_file}: {e}")
-    return s
+    Cookie jar support removed — if you ever re-add auth, this is the place.
+    """
+    return requests.Session()
 
 
 def _fetch_page(session: requests.Session, url: str) -> Optional[str]:
