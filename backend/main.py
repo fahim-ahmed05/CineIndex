@@ -337,6 +337,40 @@ def download_entry(entry: MediaEntry) -> None:
         print(Fore.GREEN + f"[DL] Finished: {dl_dir / entry.filename}\n")
 
 
+# ---------- Root purge helper ----------
+
+
+def purge_deleted_roots(conn, active_root_urls: set[str]) -> None:
+    """
+    Remove all media/dirs rows whose 'root' is not present in roots.json anymore.
+    """
+    cur = conn.cursor()
+    existing_roots: set[str] = set()
+
+    # Collect distinct roots from dirs
+    cur.execute("SELECT DISTINCT root FROM dirs WHERE root IS NOT NULL AND root <> ''")
+    for (root_val,) in cur.fetchall():
+        existing_roots.add(root_val)
+
+    # Collect distinct roots from media
+    cur.execute("SELECT DISTINCT root FROM media WHERE root IS NOT NULL AND root <> ''")
+    for (root_val,) in cur.fetchall():
+        existing_roots.add(root_val)
+
+    to_remove = existing_roots - active_root_urls
+    if not to_remove:
+        return
+
+    print(Fore.YELLOW + "[CLEAN] Removing roots no longer present in roots.json:")
+    for root in sorted(to_remove):
+        print(Fore.YELLOW + f"  - {root}")
+        cur.execute("DELETE FROM media WHERE root = ?", (root,))
+        cur.execute("DELETE FROM dirs  WHERE root = ?", (root,))
+
+    conn.commit()
+    print()
+
+
 # ---------- Index operations ----------
 
 
@@ -353,6 +387,9 @@ def build_index() -> None:
     crawl_cfg = load_crawl_config(cfg_raw)
     conn = get_conn()
     try:
+        active_roots = {rc.url for rc in root_cfgs}
+        purge_deleted_roots(conn, active_roots)
+
         for rc in root_cfgs:
             crawl_root(rc, crawl_cfg, conn=conn, incremental=False)
     finally:
@@ -373,6 +410,9 @@ def update_index() -> None:
     crawl_cfg = load_crawl_config(cfg_raw)
     conn = get_conn()
     try:
+        active_roots = {rc.url for rc in root_cfgs}
+        purge_deleted_roots(conn, active_roots)
+
         for rc in root_cfgs:
             crawl_root(rc, crawl_cfg, conn=conn, incremental=True)
     finally:
