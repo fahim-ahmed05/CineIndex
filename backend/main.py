@@ -33,6 +33,7 @@ EPISODE_REGEX = re.compile(r"[sS](\d{1,2})[ ._-]*[eE](\d{1,3})")
 
 # ---------- Utility ----------
 
+
 def separator_line() -> str:
     """Return a dim magenta line matching terminal width (capped for readability)."""
     width = shutil.get_terminal_size((80, 20)).columns
@@ -41,27 +42,41 @@ def separator_line() -> str:
 
 # ---------- Banner ----------
 
+
 def print_banner() -> None:
-    banner = Fore.MAGENTA + Style.BRIGHT + r"""
+    banner = (
+        Fore.MAGENTA
+        + Style.BRIGHT
+        + r"""
 _________ .__              .___            .___             
 \_   ___ \|__| ____   ____ |   | ____    __| _/____ ___  ___
 /    \  \/|  |/    \_/ __ \|   |/    \  / __ |/ __ \\  \/  /
 \     \___|  |   |  \  ___/|   |   |  \/ /_/ \  ___/ >    < 
  \______  /__|___|  /\___  >___|___|  /\____ |\___  >__/\_ \
         \/        \/     \/         \/      \/    \/      \/
-""" + Style.RESET_ALL
+"""
+        + Style.RESET_ALL
+    )
     print(banner)
-    print(Fore.CYAN + "A fast terminal-based media indexer and player for directory-style servers\n")
+    print(
+        Fore.CYAN
+        + "A fast terminal-based media indexer and player for directory-style servers\n"
+    )
 
 
 # ---------- Config setup ----------
+
 
 def ensure_config_files() -> None:
     created_any = False
 
     if not ROOTS_JSON.exists():
         demo_roots = [
-            {"url": "http://example-server/ftps10/Movies/", "cookie": "", "tag": "FTPS10"}
+            {
+                "url": "http://example-server/ftps10/Movies/",
+                "cookie": "",
+                "tag": "FTPS10",
+            }
         ]
         ROOTS_JSON.write_text(json.dumps(demo_roots, indent=2), encoding="utf-8")
         print(Fore.YELLOW + f"[SETUP] Created demo roots.json at {ROOTS_JSON}")
@@ -73,7 +88,10 @@ def ensure_config_files() -> None:
             "blocked_dirs": [],
             "download_dir": "",
             # example mpv args users can fill in:
-            "mpv_args": ["--save-position-on-quit", "--watch-later-options=start,volume,mute"],
+            "mpv_args": [
+                "--save-position-on-quit",
+                "--watch-later-options=start,volume,mute",
+            ],
         }
         CONFIG_JSON.write_text(json.dumps(demo_cfg, indent=2), encoding="utf-8")
         print(Fore.YELLOW + f"[SETUP] Created demo config.json at {CONFIG_JSON}")
@@ -105,6 +123,7 @@ def load_config() -> dict:
 
 def build_root_tag_map() -> dict[str, str]:
     from backend.app.media.crawler import normalize_root_url
+
     mapping: dict[str, str] = {}
     for r in load_roots_config():
         url = (r.get("url") or "").strip()
@@ -121,6 +140,7 @@ def build_root_tag_map() -> dict[str, str]:
 
 
 # ---------- Playlist helpers (series handling) ----------
+
 
 def _episode_sort_key(filename: str) -> tuple[int, int, str]:
     m = EPISODE_REGEX.search(filename)
@@ -180,6 +200,7 @@ def build_dir_playlist(entry: MediaEntry, conn) -> tuple[list[MediaEntry], int]:
 
 # ---------- mpv player ----------
 
+
 def play_entry(entry: MediaEntry, conn) -> None:
     """
     Play a single entry or a series playlist with mpv.
@@ -190,7 +211,10 @@ def play_entry(entry: MediaEntry, conn) -> None:
     if script_path.exists():
         script_arg = f"--script={script_path.as_posix()}"
     else:
-        print(Fore.YELLOW + f"[PLAY] Warning: {script_path} not found; history Lua script will not run.")
+        print(
+            Fore.YELLOW
+            + f"[PLAY] Warning: {script_path} not found; history Lua script will not run."
+        )
 
     cfg = load_config()
     mpv_args = cfg.get("mpv_args", [])
@@ -210,7 +234,10 @@ def play_entry(entry: MediaEntry, conn) -> None:
         try:
             subprocess.run(cmd)
         except FileNotFoundError:
-            print(Fore.RED + "  !! mpv not found. Make sure it's in PATH or adjust the command.")
+            print(
+                Fore.RED
+                + "  !! mpv not found. Make sure it's in PATH or adjust the command."
+            )
         except Exception as e:
             print(Fore.RED + f"  !! Error launching mpv: {e}")
         else:
@@ -219,7 +246,9 @@ def play_entry(entry: MediaEntry, conn) -> None:
 
     # Series playlist
     try:
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".m3u", mode="w", encoding="utf-8") as f:
+        with tempfile.NamedTemporaryFile(
+            delete=False, suffix=".m3u", mode="w", encoding="utf-8"
+        ) as f:
             playlist_path = f.name
             for e in playlist:
                 f.write(e.url + "\n")
@@ -248,7 +277,10 @@ def play_entry(entry: MediaEntry, conn) -> None:
     try:
         subprocess.run(cmd)
     except FileNotFoundError:
-        print(Fore.RED + "  !! mpv not found. Make sure it's in PATH or adjust the command.")
+        print(
+            Fore.RED
+            + "  !! mpv not found. Make sure it's in PATH or adjust the command."
+        )
     except Exception as e:
         print(Fore.RED + f"  !! Error launching mpv: {e}")
     finally:
@@ -261,6 +293,7 @@ def play_entry(entry: MediaEntry, conn) -> None:
 
 
 # ---------- aria2c downloader ----------
+
 
 def download_entry(entry: MediaEntry) -> None:
     """
@@ -309,6 +342,7 @@ def download_entry(entry: MediaEntry) -> None:
 
 
 # ---------- Index operations ----------
+
 
 def build_index() -> None:
     print(Fore.CYAN + "[BUILD] Starting full index build...")
@@ -367,6 +401,7 @@ def show_stats() -> None:
 
 # ---------- Search ----------
 
+
 def search_index() -> None:
     init_db()
     conn = get_conn()
@@ -388,7 +423,9 @@ def search_index() -> None:
                 print()
                 return
 
-            results = search_media(pattern, entries=entries, choices=choices, limit=50, score_cutoff=40)
+            results = search_media(
+                pattern, entries=entries, choices=choices, limit=50, score_cutoff=40
+            )
             if not results:
                 print(Fore.RED + "  No matches.\n")
                 continue
@@ -406,7 +443,9 @@ def search_index() -> None:
 
             print()
             while True:
-                sel = input(Fore.CYAN + "Select number to play (ENTER to search again): ").strip()
+                sel = input(
+                    Fore.CYAN + "Select number to play (ENTER to search again): "
+                ).strip()
                 if not sel:
                     print()
                     break
@@ -425,6 +464,7 @@ def search_index() -> None:
 
 
 # ---------- History ----------
+
 
 def show_history() -> None:
     init_db()
@@ -471,6 +511,7 @@ def show_history() -> None:
 
 # ---------- Download (aria2) ----------
 
+
 def download_index() -> None:
     init_db()
     conn = get_conn()
@@ -492,7 +533,9 @@ def download_index() -> None:
                 print()
                 return
 
-            results = search_media(pattern, entries=entries, choices=choices, limit=50, score_cutoff=40)
+            results = search_media(
+                pattern, entries=entries, choices=choices, limit=50, score_cutoff=40
+            )
             if not results:
                 print(Fore.RED + "  No matches.\n")
                 continue
@@ -509,7 +552,10 @@ def download_index() -> None:
                     print(separator_line())
             print()
 
-            sel = input(Fore.CYAN + "Select numbers to download (comma or space separated, ENTER to new search): ").strip()
+            sel = input(
+                Fore.CYAN
+                + "Select numbers to download (comma or space separated, ENTER to new search): "
+            ).strip()
             if not sel:
                 print()
                 continue
@@ -533,6 +579,7 @@ def download_index() -> None:
 
 # ---------- Menu ----------
 
+
 def print_menu() -> None:
     print(Fore.MAGENTA + Style.BRIGHT + "=== CineIndex TUI ===\n")
     print(Fore.YELLOW + "1." + Style.RESET_ALL + " Build index (full crawl)")
@@ -541,7 +588,6 @@ def print_menu() -> None:
     print(Fore.YELLOW + "4." + Style.RESET_ALL + " Stream (mpv)")
     print(Fore.YELLOW + "5." + Style.RESET_ALL + " Watch history")
     print(Fore.YELLOW + "6." + Style.RESET_ALL + " Download (aria2)")
-    print(Fore.YELLOW + "0." + Style.RESET_ALL + " Quit")
 
 
 def main() -> None:
@@ -550,7 +596,10 @@ def main() -> None:
 
     while True:
         print_menu()
-        choice = input(Fore.CYAN + "\nSelect an option: ").strip()
+        choice = input(Fore.CYAN + "\nSelect an option (ENTER to quit): ").strip()
+        if choice == "":
+            print(Fore.YELLOW + "\n👋 Bye!\n")
+            break
         if choice == "1":
             build_index()
         elif choice == "2":
@@ -563,9 +612,6 @@ def main() -> None:
             show_history()
         elif choice == "6":
             download_index()
-        elif choice in ("0", ""):
-            print(Fore.YELLOW + "\n👋 Bye!\n")
-            break
         else:
             print(Fore.RED + "\nInvalid choice.\n")
 
