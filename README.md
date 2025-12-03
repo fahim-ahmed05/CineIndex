@@ -2,6 +2,10 @@
 
 CineIndex is a high-performance, terminal-based media indexer and browser for directory-style web servers.
 
+### 🖼️ Preview
+
+![Preview](.github/preview.png)
+
 ### 🎬 Features
 
 - ⚡ Fast crawler — Scans directory-style servers and builds a local SQLite index  
@@ -64,7 +68,7 @@ Actual files:
 - ~/.local/share/CineIndex/media_index.db  
 - ~/.local/share/CineIndex/cineindex-mpv-events.log  
 
-#### macOS
+#### MacOS
 
 Config & data (Apple merges them):
 
