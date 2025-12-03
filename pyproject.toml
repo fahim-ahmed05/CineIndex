@@ -1,15 +1,23 @@
 [project]
 name = "cineindex"
-version = "0.1.2"
+version = "0.1.4"
 description = "A fast terminal-based media indexer and player for directory-style servers."
 requires-python = ">=3.11"
 license = { text = "MIT" }
+readme = "README.md"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+keywords = ["media", "mpv", "indexer", "crawler", "movies", "streaming"]
 authors = [{ name = "Fahim Ahmed", email = "fahim.ahmed1453@gmail.com" }]
 dependencies = [
     "requests>=2.32.0",
     "beautifulsoup4>=4.12.0",
     "rapidfuzz>=3.9.0",
     "colorama>=0.4.6",
+    "platformdirs>=4.0.0",
 ]
 
 [project.urls]
@@ -23,11 +31,8 @@ cineindex = "app.main:main"
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
-# Build config (wheel)
 [tool.hatch.build.targets.wheel]
 packages = ["app"]
-include = ["cineindex-history.lua"]
 
-# (Optional) sdist config mirrors the wheel include
 [tool.hatch.build.targets.sdist]
 include = ["app/**/*", "README.md", "LICENSE", "pyproject.toml"]
