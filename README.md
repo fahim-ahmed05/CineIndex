@@ -2,7 +2,7 @@
 
 CineIndex is a high-performance, terminal-based media indexer and browser for directory-style web servers (Apache-style, h5ai, autoindex, etc.).
 
-## 🎬 Features
+### 🎬 Features
 
 - ⚡ Fast crawler — Scans directory-style servers and builds a local SQLite index  
 - 🔄 Incremental updates — Re-indexes only changed directories  
@@ -13,14 +13,14 @@ CineIndex is a high-performance, terminal-based media indexer and browser for di
 - ⚙️ Configurable — Extensions, blocked folders, mpv args, download dir  
 - 🖥️ TUI menu — Build/Update/Search/History/Download options  
 
-## 📦 Requirements
+### 📦 Requirements
 
 - Python 3.10+
 - mpv
 - aria2c
 - uv (recommended) or pip (if you know how to use it)
 
-## 📥 Installation
+### 📥 Installation
 
 Clone and install:
 
@@ -30,7 +30,7 @@ Clone and install:
     uv sync
     uv tool install .
 ```
-## ▶️ Run CineIndex
+### ▶️ Run CineIndex
 
 Just type in a terminal:
 
@@ -39,11 +39,11 @@ Just type in a terminal:
 ```
 
 
-# 📁 File Locations (Config, Database, History)
+### 📁 File Locations (Config, Database, History)
 
 CineIndex stores all persistent data in OS-appropriate application directories, managed via `platformdirs`.
 
-## Linux
+#### Linux
 
 Config directory:
 
@@ -60,7 +60,7 @@ Actual files:
 - ~/.local/share/CineIndex/media_index.db  
 - ~/.local/share/CineIndex/cineindex-mpv-events.log  
 
-## macOS
+#### macOS
 
 Config & data (Apple merges them):
 
@@ -73,7 +73,7 @@ Files:
 - ~/Library/Application Support/CineIndex/media_index.db  
 - ~/Library/Application Support/CineIndex/cineindex-mpv-events.log  
 
-## Windows
+#### Windows
 
 Config:
 
@@ -92,11 +92,11 @@ Files:
 
 
 
-# ⚙️ Configuration Files
+### ⚙️ Configuration Files
 
 Created automatically on first run.
 
-## Example roots.json
+#### Example roots.json
 
 ```json
     [
@@ -107,7 +107,7 @@ Created automatically on first run.
     ]
 ```
 
-## Example config.json
+#### Example config.json
 
 ```json
     {
@@ -122,7 +122,7 @@ Created automatically on first run.
     }
 ```
 
-# 🎞️ Watch History
+### 🎞️ Watch History
 
 Playback events are recorded by `cineindex-history.lua`, which MPV loads automatically.
 
@@ -138,7 +138,7 @@ This is used to populate the in-app **Watch History** menu and resume playback.
 
 
 
-# ☕ Support
+### ☕ Support
 
 If you find CineIndex helpful, consider supporting development:
 
@@ -150,4 +150,3 @@ If you find CineIndex helpful, consider supporting development:
 
 
 
-Enjoy CineIndex!
