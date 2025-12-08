@@ -63,10 +63,13 @@ Data directory:
 
 Actual files:
 
-- ~/.config/CineIndex/config.json  
-- ~/.config/CineIndex/roots.json  
-- ~/.local/share/CineIndex/media_index.db  
-- ~/.local/share/CineIndex/cineindex-mpv-events.log  
+```bash
+~/.config/CineIndex/
+├── config.json  
+├── roots.json  
+├── media_index.db  
+└── cineindex-mpv-events.log  
+```
 
 #### MacOS
 
@@ -77,10 +80,13 @@ Config & data (Apple merges them):
 ```
 Files:
 
-- ~/Library/Application Support/CineIndex/config.json  
-- ~/Library/Application Support/CineIndex/roots.json  
-- ~/Library/Application Support/CineIndex/media_index.db  
-- ~/Library/Application Support/CineIndex/cineindex-mpv-events.log  
+```zsh
+~/Library/Application Support/CineIndex/
+├── config.json  
+├── roots.json  
+├── media_index.db  
+└── cineindex-mpv-events.log  
+```
 
 #### Windows
 
@@ -92,17 +98,18 @@ Config:
 Data:
 
 ```powershell
-    %LOCALAPPDATA%\CineIndex\CineIndex\
+    %APPDATA%\CineIndex\CineIndex\
 ```
 
 Files:
 
-- %APPDATA%\CineIndex\CineIndex\config.json  
-- %APPDATA%\CineIndex\CineIndex\roots.json  
-- %APPDATA%\CineIndex\CineIndex\media_index.db  
-- %APPDATA%\CineIndex\CineIndex\cineindex-mpv-events.log  
-
-
+```pwsh
+%APPDATA%\CineIndex\CineIndex\
+├── config.json  
+├── roots.json  
+├── media_index.db  
+└── cineindex-mpv-events.log  
+```
 
 ### ⚙️ Configuration Files
 
@@ -124,7 +131,7 @@ Created automatically on first run.
 ```json
     {
       "video_extensions": ["mp4", "mkv", "avi"],
-      "blocked_dirs": ["Ebooks", "Software"],
+      "blocked_dirs": ["Ebooks", "Software", "Games"],
       "mpv_args": [
         "--save-position-on-quit",
         "--fullscreen",
