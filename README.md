@@ -99,8 +99,8 @@ Files:
 
 - %APPDATA%\CineIndex\CineIndex\config.json  
 - %APPDATA%\CineIndex\CineIndex\roots.json  
-- %LOCALAPPDATA%\CineIndex\CineIndex\media_index.db  
-- %LOCALAPPDATA%\CineIndex\CineIndex\cineindex-mpv-events.log  
+- %APPDATA%\CineIndex\CineIndex\media_index.db  
+- %APPDATA%\CineIndex\CineIndex\cineindex-mpv-events.log  
 
 
 
