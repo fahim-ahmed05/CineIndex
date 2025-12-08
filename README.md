@@ -87,20 +87,20 @@ Files:
 Config:
 
 ```powershell
-    %APPDATA%\Fahim Ahmed\CineIndex\
+    %APPDATA%\CineIndex\CineIndex\
 ```
 Data:
 
 ```powershell
-    %LOCALAPPDATA%\Fahim Ahmed\CineIndex\
+    %LOCALAPPDATA%\CineIndex\CineIndex\
 ```
 
 Files:
 
-- %APPDATA%\Fahim Ahmed\CineIndex\config.json  
-- %APPDATA%\Fahim Ahmed\CineIndex\roots.json  
-- %LOCALAPPDATA%\Fahim Ahmed\CineIndex\media_index.db  
-- %LOCALAPPDATA%\Fahim Ahmed\CineIndex\cineindex-mpv-events.log  
+- %APPDATA%\CineIndex\CineIndex\config.json  
+- %APPDATA%\CineIndex\CineIndex\roots.json  
+- %LOCALAPPDATA%\CineIndex\CineIndex\media_index.db  
+- %LOCALAPPDATA%\CineIndex\CineIndex\cineindex-mpv-events.log  
 
 
 

@@ -12,7 +12,7 @@ _dirs = PlatformDirs(APP_NAME, None, ensure_exists=True)
 # OS-appropriate user config and data dirs:
 # - Linux:  ~/.config/CineIndex/   (config), ~/.local/share/CineIndex/ (data)
 # - macOS:  ~/Library/Application Support/CineIndex/ (both)
-# - Win:    %LOCALAPPDATA%\CineIndex\ (both, by default)
+# - Win:    %LOCALAPPDATA%\CineIndex\CineIndex\ (both, by default)
 CONFIG_DIR = Path(_dirs.user_config_dir)
 DATA_DIR = Path(_dirs.user_data_dir)
 

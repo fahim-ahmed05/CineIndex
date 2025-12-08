@@ -33,7 +33,7 @@ init(autoreset=True)
 # Config files now live in an OS-appropriate config directory:
 # - Linux:  ~/.config/CineIndex/
 # - macOS:  ~/Library/Application Support/CineIndex/
-# - Windows: %LOCALAPPDATA%\CineIndex\
+# - Windows: %LOCALAPPDATA%\CineIndex\CineIndex\
 CONFIG_JSON = CONFIG_DIR / "config.json"
 ROOTS_JSON = CONFIG_DIR / "roots.json"
 
