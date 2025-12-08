@@ -64,11 +64,11 @@ Data directory:
 Actual files:
 
 ```bash
-~/.config/CineIndex/
-├── config.json  
-├── roots.json  
-├── media_index.db  
-└── cineindex-mpv-events.log  
+    ~/.config/CineIndex/
+    ├── config.json  
+    ├── roots.json  
+    ├── media_index.db  
+    └── cineindex-mpv-events.log  
 ```
 
 #### MacOS
@@ -81,11 +81,11 @@ Config & data (Apple merges them):
 Files:
 
 ```zsh
-~/Library/Application Support/CineIndex/
-├── config.json  
-├── roots.json  
-├── media_index.db  
-└── cineindex-mpv-events.log  
+    ~/Library/Application Support/CineIndex/
+    ├── config.json  
+    ├── roots.json  
+    ├── media_index.db  
+    └── cineindex-mpv-events.log  
 ```
 
 #### Windows
@@ -93,17 +93,17 @@ Files:
 Config & data:
 
 ```powershell
-    %APPDATA%\CineIndex\CineIndex\
+    $env:LocalAppData\CineIndex\CineIndex\
 ```
 
 Files:
 
 ```pwsh
-%APPDATA%\CineIndex\CineIndex\
-├── config.json  
-├── roots.json  
-├── media_index.db  
-└── cineindex-mpv-events.log  
+    $env:LocalAppData\CineIndex\CineIndex\
+    ├── config.json  
+    ├── roots.json  
+    ├── media_index.db  
+    └── cineindex-mpv-events.log  
 ```
 
 ### ⚙️ Configuration Files
