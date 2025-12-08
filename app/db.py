@@ -6,14 +6,13 @@ from pathlib import Path
 from platformdirs import PlatformDirs
 
 APP_NAME = "CineIndex"
-APP_AUTHOR = "Fahim Ahmed"
 
-_dirs = PlatformDirs(APP_NAME, APP_AUTHOR, ensure_exists=True)
+_dirs = PlatformDirs(APP_NAME, None, ensure_exists=True)
 
 # OS-appropriate user config and data dirs:
 # - Linux:  ~/.config/CineIndex/   (config), ~/.local/share/CineIndex/ (data)
 # - macOS:  ~/Library/Application Support/CineIndex/ (both)
-# - Win:    %LOCALAPPDATA%\Fahim Ahmed\CineIndex\ (both, by default)
+# - Win:    %LOCALAPPDATA%\CineIndex\ (both, by default)
 CONFIG_DIR = Path(_dirs.user_config_dir)
 DATA_DIR = Path(_dirs.user_data_dir)
 
