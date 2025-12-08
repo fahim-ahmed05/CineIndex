@@ -66,7 +66,9 @@ Actual files:
 ```bash
     ~/.config/CineIndex/
     ├── config.json  
-    ├── roots.json  
+    └── roots.json  
+
+    ~/.local/share/CineIndex/
     ├── media_index.db  
     └── cineindex-mpv-events.log  
 ```
