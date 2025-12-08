@@ -90,12 +90,7 @@ Files:
 
 #### Windows
 
-Config:
-
-```powershell
-    %APPDATA%\CineIndex\CineIndex\
-```
-Data:
+Config & data:
 
 ```powershell
     %APPDATA%\CineIndex\CineIndex\
