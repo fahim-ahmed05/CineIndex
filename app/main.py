@@ -7,6 +7,9 @@ import shutil
 import subprocess
 import tempfile
 from pathlib import Path
+import socket
+import urllib.error
+import urllib.request
 from urllib.parse import urlparse, unquote
 from typing import Callable, TypeVar
 
@@ -1146,6 +1149,42 @@ def build_dir_playlist(
 # ---------- mpv player ----------
 
 
+def check_server_accessible(url: str, timeout: float = 2.0) -> bool:
+    """Check if the server (host:port) is accessible via TCP socket."""
+    try:
+        parsed = urlparse(url)
+        host = parsed.hostname
+        if not host:
+            return False
+        port = parsed.port or (443 if parsed.scheme == "https" else 80)
+        with socket.create_connection((host, port), timeout=timeout):
+            pass
+        return True
+    except Exception:
+        return False
+
+
+def check_file_accessible(url: str, timeout: float = 2.0) -> bool:
+    """Check if the specific file URL is accessible via HTTP HEAD."""
+    if url.startswith("http://") or url.startswith("https://"):
+        try:
+            req = urllib.request.Request(url, method="HEAD")
+            with urllib.request.urlopen(req, timeout=timeout) as response:
+                return response.status < 400
+        except urllib.error.HTTPError as e:
+            if e.code == 404:
+                return False
+            # Other HTTP errors (e.g., 405 Method Not Allowed) might mean the file is there but HEAD is blocked
+            return False
+        except urllib.error.URLError:
+            return False
+        except Exception:
+            return False
+    else:
+        # Fallback for non-HTTP URLs (e.g., ftp://)
+        return check_server_accessible(url, timeout)
+
+
 def play_entry(
     entry: MediaEntry, conn, root_tags: dict[str, str] | None = None
 ) -> None:
@@ -1156,6 +1195,14 @@ def play_entry(
     The Lua script, when loaded, writes JSONL history to a log file whose path is
     communicated via the CINEINDEX_HISTORY_PATH environment variable.
     """
+    if not check_file_accessible(entry.url):
+        if check_server_accessible(entry.root):
+            print(Fore.RED + "[PLAY] Error: The file is missing from the server. It may have been removed. Consider rebuilding the index.\n")
+        else:
+            print(Fore.RED + "[PLAY] Error: The server hosting this media is currently offline.\n")
+        return
+
+
     script_path = HERE / "cineindex-history.lua"
     script_arg = None
     if script_path.exists():
