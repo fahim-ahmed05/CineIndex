@@ -1149,7 +1149,7 @@ def build_dir_playlist(
 # ---------- mpv player ----------
 
 
-def check_server_accessible(url: str, timeout: float = 2.0) -> bool:
+def check_server_accessible(url: str, timeout: float = 5.0) -> bool:
     """Check if the server (host:port) is accessible via TCP socket."""
     try:
         parsed = urlparse(url)
@@ -1164,11 +1164,22 @@ def check_server_accessible(url: str, timeout: float = 2.0) -> bool:
         return False
 
 
-def check_file_accessible(url: str, timeout: float = 2.0) -> bool:
+def check_file_accessible(url: str, timeout: float = 5.0) -> bool:
     """Check if the specific file URL is accessible via HTTP HEAD."""
     if url.startswith("http://") or url.startswith("https://"):
         try:
-            req = urllib.request.Request(url, method="HEAD")
+            from urllib.parse import quote, urlunparse
+            parsed = urlparse(url)
+            # URL encode the path to prevent http.client.InvalidURL when URLs contain spaces
+            encoded_url = urlunparse((
+                parsed.scheme,
+                parsed.netloc,
+                quote(unquote(parsed.path)),
+                parsed.params,
+                quote(unquote(parsed.query)),
+                parsed.fragment
+            ))
+            req = urllib.request.Request(encoded_url, method="HEAD")
             with urllib.request.urlopen(req, timeout=timeout) as response:
                 return response.status < 400
         except urllib.error.HTTPError as e:
