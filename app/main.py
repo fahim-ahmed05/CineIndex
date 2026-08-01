@@ -423,6 +423,44 @@ def _fzf_tag(
     )
 
 
+def _pretty_filename(fname: str, dots_to_spaces: bool = False) -> str:
+    """
+    Present filenames nicely: optionally replace dots used as word separators with spaces,
+    but preserve the file extension (last dot) and any dots in blocklisted patterns.
+    """
+    if not fname:
+        return fname
+    if "." not in fname:
+        return fname
+
+    # Split on last dot to separate extension
+    parts = fname.rsplit(".", 1)
+    name, ext = parts[0], parts[1]
+
+    if not dots_to_spaces:
+        return fname
+
+    # Find all blocklisted patterns and mark their positions
+    blocked_ranges = set()
+    for pattern in COMPILED_DOT_BLOCKLIST:
+        for match in pattern.finditer(name):
+            blocked_ranges.update(range(match.start(), match.end()))
+
+    # Replace dots with spaces, except for dots in blocked ranges
+    result = []
+    for i, char in enumerate(name):
+        if char == "." and i not in blocked_ranges:
+            result.append(" ")
+        else:
+            result.append(char)
+
+    display = "".join(result)
+    display = _METADATA_TAG_RE.sub(" ", display)
+    # Clean up multiple spaces (from adjacent dots or replaced dots)
+    display = " ".join([p for p in display.split() if p]) or name
+    return f"{display}.{ext}"
+
+
 def _fzf_media_text(
     entry: MediaEntry,
     root_tags: dict[str, str],
