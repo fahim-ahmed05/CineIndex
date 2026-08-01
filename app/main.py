@@ -228,7 +228,6 @@ def load_config() -> dict:
         "blocked_dirs": [],
         "download_dir": "",
         "mpv_args": ["--save-position-on-quit", "--fullscreen"],
-        "max_per_root": 0,
     }
 
     if not CONFIG_JSON.exists():
@@ -325,146 +324,18 @@ def _path_parent_leaf(path: str) -> str:
     return parts[-2].lower() if len(parts) >= 2 else ""
 
 
-def _tree_path_parts(path: str, decode_percent: bool = True) -> list[str]:
-    if path == "/" or not path:
-        return []
-    parts = [part for part in path.strip("/").split("/") if part]
-    if decode_percent:
-        return [unquote(part) for part in parts]
-    return parts
-
-
-def _tree_init() -> dict:
-    return {"children": {}, "files": []}
-
-
-def _pretty_filename(fname: str, dots_to_spaces: bool = False) -> str:
-    """
-    Present filenames nicely: optionally replace dots used as word separators with spaces,
-    but preserve the file extension (last dot) and any dots in blocklisted patterns.
-    """
-    if not fname:
-        return fname
-    if "." not in fname:
-        return fname
-
-    # Split on last dot to separate extension
-    parts = fname.rsplit(".", 1)
-    name, ext = parts[0], parts[1]
-
-    if not dots_to_spaces:
-        return fname
-
-    # Find all blocklisted patterns and mark their positions
-    blocked_ranges = set()
-    for pattern in COMPILED_DOT_BLOCKLIST:
-        for match in pattern.finditer(name):
-            blocked_ranges.update(range(match.start(), match.end()))
-
-    # Replace dots with spaces, except for dots in blocked ranges
-    result = []
-    for i, char in enumerate(name):
-        if char == "." and i not in blocked_ranges:
-            result.append(" ")
-        else:
-            result.append(char)
-
-    display = "".join(result)
-    display = _METADATA_TAG_RE.sub(" ", display)
-    # Clean up multiple spaces (from adjacent dots or replaced dots)
-    display = " ".join([p for p in display.split() if p]) or name
-    return f"{display}.{ext}"
-
-
-def _tree_add_file(
-    tree: dict,
-    rel_path: str,
-    filename: str,
-    *,
-    decode_percent: bool = True,
-    dots_to_spaces: bool = False,
-) -> None:
-    node = tree
-    for part in _tree_path_parts(rel_path, decode_percent=decode_percent):
-        node = node["children"].setdefault(part, _tree_init())
-    files: list[str] = node["files"]
-    # Store the raw filename; prettification is applied at render time.
-    if filename not in files:
-        files.append(filename)
-
-
-def _tree_render_node(
-    node: dict,
-    *,
-    prefix: str = "",
-    dots_to_spaces: bool = False,
-) -> None:
-    children = list(node["children"].items())
-    files = list(node["files"])
-    items: list[tuple[str, str, dict | None]] = [
-        ("dir", name, child) for name, child in children
-    ] + [("file", name, None) for name in files]
-
-    for index, (kind, name, child) in enumerate(items):
-        is_last = index == len(items) - 1
-        connector = "└── " if is_last else "├── "
-        if kind == "dir":
-            print(Fore.CYAN + prefix + connector + name)
-            next_prefix = prefix + ("    " if is_last else "│   ")
-            _tree_render_node(
-                child or _tree_init(), prefix=next_prefix, dots_to_spaces=dots_to_spaces
-            )
-        else:
-            display_name = _pretty_filename(name, dots_to_spaces=dots_to_spaces)
-            print(Fore.GREEN + prefix + connector + display_name)
-
-
-def _tree_render_root(
-    root_tag: str, tree: dict, *, dots_to_spaces: bool = False
-) -> None:
-    print(Fore.MAGENTA + root_tag)
-    _tree_render_node(tree, prefix="", dots_to_spaces=dots_to_spaces)
-
-
-def _crawl_root_with_tree(
+def _crawl_and_count(
     rc,
     *,
     crawl_cfg: dict,
     conn,
-    root_tag_map: dict[str, str],
     incremental: bool,
-    max_per_root: int,
-) -> tuple[int, int, int, int, float, int]:
+) -> tuple[int, int, int, int, float]:
     cur = conn.cursor()
     cur.execute("SELECT COUNT(*) FROM dirs WHERE root = ?", (rc.url,))
     before_dirs = cur.fetchone()[0]
     cur.execute("SELECT COUNT(*) FROM media WHERE root = ?", (rc.url,))
     before_media = cur.fetchone()[0]
-
-    live_state: dict = {
-        "tree": _tree_init(),
-        "printed_count": 0,
-        "suppressed": 0,
-    }
-
-    def _on_new_file(_root_url: str, rel_path: str, fname: str) -> None:
-        try:
-            if max_per_root == 0 or live_state["printed_count"] < max_per_root:
-                display_fname = (
-                    unquote(fname) if getattr(rc, "decode_percent", True) else fname
-                )
-                _tree_add_file(
-                    live_state["tree"],
-                    rel_path,
-                    display_fname,
-                    decode_percent=getattr(rc, "decode_percent", True),
-                    dots_to_spaces=getattr(rc, "dots_to_spaces", False),
-                )
-                live_state["printed_count"] += 1
-            else:
-                live_state["suppressed"] += 1
-        except Exception:
-            pass
 
     result = crawl_root(
         rc,
@@ -472,16 +343,7 @@ def _crawl_root_with_tree(
         conn=conn,
         incremental=incremental,
         summary_only=True,
-        on_new_file=_on_new_file,
     )
-
-    if live_state["printed_count"] > 0:
-        print()
-        _tree_render_root(
-            root_tag_map.get(rc.url, rc.url),
-            live_state["tree"],
-            dots_to_spaces=getattr(rc, "dots_to_spaces", False),
-        )
 
     cur.execute("SELECT COUNT(*) FROM dirs WHERE root = ?", (rc.url,))
     after_dirs = cur.fetchone()[0]
@@ -494,7 +356,6 @@ def _crawl_root_with_tree(
         before_media,
         after_media,
         result.elapsed_seconds,
-        int(live_state["suppressed"]),
     )
 
 
@@ -1701,10 +1562,6 @@ def _run_index(incremental: bool) -> None:
     cfg_raw = load_config()
     root_cfgs = load_root_configs(roots_raw)
     crawl_cfg = load_crawl_config(cfg_raw)
-    try:
-        max_per_root = int(cfg_raw.get("max_per_root", 0) or 0)
-    except Exception:
-        max_per_root = 0
     crawl_targets = [rc for rc in root_cfgs if getattr(rc, "enabled", True)]
     conn = get_conn()
     try:
@@ -1723,23 +1580,19 @@ def _run_index(incremental: bool) -> None:
                 + "No enabled roots to crawl (check 'enabled' in roots.json).\n"
             )
             return
-
-        root_tag_map = build_root_tag_map()
         for index, rc in enumerate(crawl_targets, start=1):
+            print(Fore.CYAN + f"[{action_name.upper()}] {index}/{total_roots} Indexing | root={rc.url} ", end="\r", flush=True)
             (
                 before_dirs,
                 after_dirs,
                 before_media,
                 after_media,
                 elapsed_seconds,
-                suppressed,
-            ) = _crawl_root_with_tree(
+            ) = _crawl_and_count(
                 rc,
                 crawl_cfg=crawl_cfg,
                 conn=conn,
-                root_tag_map=root_tag_map,
                 incremental=incremental,
-                max_per_root=max_per_root,
             )
 
             if incremental:
@@ -1761,9 +1614,6 @@ def _run_index(incremental: bool) -> None:
                         f"time={format_duration(elapsed_seconds)}"
                     )
                 )
-
-            if suppressed > 0:
-                print(Fore.YELLOW + f"  ... +{suppressed} more omitted for this root")
 
         cur.execute("SELECT COUNT(*) FROM dirs")
         new_dirs_total = cur.fetchone()[0]
