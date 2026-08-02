@@ -11,9 +11,9 @@ import androidx.room.PrimaryKey
 @Entity(
     tableName = "media",
     indices = [
-        Index("root"),
-        Index("path"),
-        Index("filename")
+        Index(value = ["root"], name = "idx_media_root"),
+        Index(value = ["path"], name = "idx_media_path"),
+        Index(value = ["filename"], name = "idx_media_filename")
     ]
 )
 data class MediaEntity(

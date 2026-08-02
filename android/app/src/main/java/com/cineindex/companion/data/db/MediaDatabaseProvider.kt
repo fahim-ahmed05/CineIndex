@@ -38,7 +38,6 @@ class MediaDatabaseProvider {
             MediaDatabase::class.java,
             "media_readonly"
         )
-            .fallbackToDestructiveMigration()
             .build()
 
         database = db
