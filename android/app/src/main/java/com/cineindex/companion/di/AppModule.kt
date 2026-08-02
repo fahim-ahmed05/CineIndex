@@ -25,7 +25,7 @@ object AppModule {
             context.applicationContext,
             AppDatabase::class.java,
             "cineindex_app.db"
-        ).build()
+        ).fallbackToDestructiveMigration().build()
     }
 
     @Provides
