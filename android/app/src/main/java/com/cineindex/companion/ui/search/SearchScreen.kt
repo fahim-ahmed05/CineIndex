@@ -80,6 +80,12 @@ fun SearchScreen(
                     }
                 },
                 singleLine = true,
+                keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                    imeAction = androidx.compose.ui.text.input.ImeAction.Search
+                ),
+                keyboardActions = androidx.compose.foundation.text.KeyboardActions(
+                    onSearch = { focusManager.clearFocus() }
+                ),
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = MaterialTheme.colorScheme.primary,
                     unfocusedBorderColor = MaterialTheme.colorScheme.surfaceContainerHigh,
@@ -99,6 +105,13 @@ fun SearchScreen(
         }
 
         // Main content area
+        val listState = androidx.compose.foundation.lazy.rememberLazyListState()
+        LaunchedEffect(listState.isScrollInProgress) {
+            if (listState.isScrollInProgress) {
+                focusManager.clearFocus()
+            }
+        }
+
         if (!dbLoaded) {
             Box(
                 modifier = Modifier
@@ -135,7 +148,11 @@ fun SearchScreen(
                 }
             } else {
                 LazyColumn(
-                    modifier = Modifier.weight(1f).fillMaxWidth(),
+                    state = listState,
+                    modifier = Modifier.weight(1f).fillMaxWidth()
+                        .pointerInput(Unit) {
+                            detectTapGestures(onTap = { focusManager.clearFocus() })
+                        },
                     contentPadding = PaddingValues(vertical = 4.dp)
                 ) {
                     item {
@@ -175,9 +192,13 @@ fun SearchScreen(
         } else {
             // Results list
             LazyColumn(
+                state = listState,
                 modifier = Modifier
                     .weight(1f)
-                    .fillMaxWidth(),
+                    .fillMaxWidth()
+                    .pointerInput(Unit) {
+                        detectTapGestures(onTap = { focusManager.clearFocus() })
+                    },
                 contentPadding = PaddingValues(vertical = 4.dp)
             ) {
                 items(
@@ -260,7 +281,7 @@ private fun MediaResultItem(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
-                    text = "[$root] $path",
+                    text = root,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                     maxLines = 1,
