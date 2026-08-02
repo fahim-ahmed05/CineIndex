@@ -62,11 +62,16 @@ class SearchViewModel @Inject constructor(
     private var mediaDao: MediaDao? = null
 
     init {
-        // Load DB when folder URI is available
+        // Initial fast-load from internal storage
         viewModelScope.launch {
-            appPreferences.dbFolderUri.collect { uriStr ->
-                if (uriStr != null) {
-                    loadDatabase(uriStr)
+            loadInternalDatabase()
+        }
+
+        // Sync from SAF only when the URI actually changes (e.g., set for the first time or manually reloaded)
+        viewModelScope.launch {
+            appPreferences.dbFolderUri.drop(1).collect { uriStr ->
+                if (!uriStr.isNullOrEmpty()) {
+                    syncDatabaseFromSaf(uriStr)
                 }
             }
         }
@@ -82,7 +87,28 @@ class SearchViewModel @Inject constructor(
         }
     }
 
-    private suspend fun loadDatabase(folderUriStr: String) {
+    private suspend fun loadInternalDatabase() {
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            val internalDbFile = File(appContext.filesDir, "media_index.db")
+            val internalRootsFile = File(appContext.filesDir, "roots.json")
+
+            if (internalDbFile.exists()) {
+                if (internalRootsFile.exists()) rootsConfig.load(internalRootsFile)
+                val db = mediaDatabaseProvider.open(appContext, internalDbFile)
+                if (db != null) {
+                    val dao = db.mediaDao()
+                    mediaDao = dao
+                    searchEngine = SearchEngine(dao)
+                    _mediaCount.value = dao.getCount()
+                    _dbLoaded.value = true
+                    return@withContext
+                }
+            }
+            _dbLoaded.value = false
+        }
+    }
+
+    private suspend fun syncDatabaseFromSaf(folderUriStr: String) {
         kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
             mediaDatabaseProvider.setLoading(true)
             try {
@@ -105,26 +131,14 @@ class SearchViewModel @Inject constructor(
                     }
                 }
 
-                val internalDbFile = File(appContext.filesDir, "media_index.db")
-                val internalRootsFile = File(appContext.filesDir, "roots.json")
-
                 if (dbDocFile == null || !dbDocFile.exists()) {
                     // Fallback to internal database if SAF is disconnected/missing
-                    if (internalDbFile.exists()) {
-                        if (internalRootsFile.exists()) rootsConfig.load(internalRootsFile)
-                        val db = mediaDatabaseProvider.open(appContext, internalDbFile)
-                        if (db != null) {
-                            val dao = db.mediaDao()
-                            mediaDao = dao
-                            searchEngine = SearchEngine(dao)
-                            _mediaCount.value = dao.getCount()
-                            _dbLoaded.value = true
-                            return@withContext
-                        }
-                    }
-                    _dbLoaded.value = false
+                    loadInternalDatabase()
                     return@withContext
                 }
+
+                val internalDbFile = File(appContext.filesDir, "media_index.db")
+                val internalRootsFile = File(appContext.filesDir, "roots.json")
 
                 // Copy DB to internal storage
                 appContext.contentResolver.openInputStream(dbDocFile.uri)?.use { input ->
@@ -139,17 +153,10 @@ class SearchViewModel @Inject constructor(
                             input.copyTo(output)
                         }
                     }
-                    rootsConfig.load(internalRootsFile)
                 }
 
-                val db = mediaDatabaseProvider.open(appContext, internalDbFile)
-                if (db != null) {
-                    val dao = db.mediaDao()
-                    mediaDao = dao
-                    searchEngine = SearchEngine(dao)
-                    _mediaCount.value = dao.getCount()
-                    _dbLoaded.value = true
-                }
+                // After syncing, load it
+                loadInternalDatabase()
             } catch (e: Exception) {
                 _dbLoaded.value = false
             } finally {
