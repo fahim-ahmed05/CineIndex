@@ -93,14 +93,25 @@ class SearchViewModel @Inject constructor(
             val internalRootsFile = File(appContext.filesDir, "roots.json")
 
             if (dbFile.exists()) {
-                if (internalRootsFile.exists()) rootsConfig.load(internalRootsFile)
-                val db = mediaDatabaseProvider.open(appContext)
-                if (db != null) {
-                    val dao = db.mediaDao()
-                    mediaDao = dao
-                    searchEngine = SearchEngine(dao)
-                    _mediaCount.value = dao.getCount()
-                    _dbLoaded.value = true
+                try {
+                    if (internalRootsFile.exists()) rootsConfig.load(internalRootsFile)
+                    val db = mediaDatabaseProvider.open(appContext)
+                    if (db != null) {
+                        val dao = db.mediaDao()
+                        mediaDao = dao
+                        searchEngine = SearchEngine(dao)
+                        _mediaCount.value = dao.getCount()
+                        _dbLoaded.value = true
+                        return@withContext
+                    }
+                } catch (e: Exception) {
+                    // If Room fails to open (e.g. schema mismatch, corruption, missing hash), 
+                    // delete the invalid file to prevent crash loops and reset state.
+                    mediaDatabaseProvider.close()
+                    dbFile.delete()
+                    appContext.getDatabasePath("media_readonly-shm").delete()
+                    appContext.getDatabasePath("media_readonly-wal").delete()
+                    _dbLoaded.value = false
                     return@withContext
                 }
             }
