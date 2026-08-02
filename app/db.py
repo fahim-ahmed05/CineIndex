@@ -58,7 +58,7 @@ def init_db() -> None:
         cur.execute(
             """
             CREATE TABLE IF NOT EXISTS media (
-                url      TEXT PRIMARY KEY,
+                url      TEXT NOT NULL PRIMARY KEY,
                 root     TEXT NOT NULL,
                 path     TEXT NOT NULL,
                 filename TEXT NOT NULL,

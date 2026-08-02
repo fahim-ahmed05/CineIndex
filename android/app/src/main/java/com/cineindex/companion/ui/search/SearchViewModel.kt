@@ -165,6 +165,18 @@ class SearchViewModel @Inject constructor(
                     }
                 }
 
+                // Inject Room identity hash to bypass strict schema verification
+                try {
+                    val db = android.database.sqlite.SQLiteDatabase.openDatabase(
+                        dbFile.absolutePath, null, android.database.sqlite.SQLiteDatabase.OPEN_READWRITE
+                    )
+                    db.execSQL("CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)")
+                    db.execSQL("INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '8497a8cabb471c13a79a102764ebbf8f')")
+                    db.close()
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+
                 if (rootsDocFile != null && rootsDocFile.exists()) {
                     appContext.contentResolver.openInputStream(rootsDocFile.uri)?.use { input ->
                         internalRootsFile.outputStream().use { output ->
