@@ -1572,8 +1572,19 @@ if m:
         # Rebuild FTS5 full-text search index (used by Android companion app)
         try:
             cur = conn.cursor()
-            cur.execute("DELETE FROM media_fts")
-            cur.execute("INSERT INTO media_fts(media_fts) VALUES('rebuild')")
+            try:
+                cur.execute("DELETE FROM media_fts")
+                cur.execute("INSERT INTO media_fts(media_fts) VALUES('rebuild')")
+            except Exception:
+                # If shadow tables are corrupted (e.g., 'database disk image is malformed'), drop and recreate
+                cur.execute("DROP TABLE IF EXISTS media_fts")
+                cur.execute(
+                    """
+                    CREATE VIRTUAL TABLE media_fts
+                    USING fts5(filename, path, content=media, content_rowid=rowid)
+                    """
+                )
+                cur.execute("INSERT INTO media_fts(media_fts) VALUES('rebuild')")
             conn.commit()
             print(Fore.GREEN + f"  [OK] FTS5 search index rebuilt.")
         except Exception as fts_err:
