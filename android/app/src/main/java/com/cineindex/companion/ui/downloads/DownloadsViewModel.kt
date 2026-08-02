@@ -14,6 +14,8 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 import java.io.File
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.combine
 
 @HiltViewModel
 class DownloadsViewModel @Inject constructor(
@@ -21,11 +23,33 @@ class DownloadsViewModel @Inject constructor(
     private val downloadRepository: DownloadRepository
 ) : ViewModel() {
 
-    val activeDownloads: StateFlow<List<DownloadEntity>> = downloadDao.observeActive()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    private val _searchQuery = MutableStateFlow("")
+    val searchQuery: StateFlow<String> = _searchQuery
 
-    val completedDownloads: StateFlow<List<DownloadEntity>> = downloadDao.observeCompleted()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    val activeDownloads: StateFlow<List<DownloadEntity>> = combine(
+        downloadDao.observeActive(),
+        _searchQuery
+    ) { list, query ->
+        if (query.isBlank()) list else list.filter { it.filename.contains(query, ignoreCase = true) }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val completedDownloads: StateFlow<List<DownloadEntity>> = combine(
+        downloadDao.observeCompleted(),
+        _searchQuery
+    ) { list, query ->
+        if (query.isBlank()) list else list.filter { it.filename.contains(query, ignoreCase = true) }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val hasAnyDownloads: StateFlow<Boolean> = combine(
+        downloadDao.observeActive(),
+        downloadDao.observeCompleted()
+    ) { active, completed ->
+        active.isNotEmpty() || completed.isNotEmpty()
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+
+    fun onSearchQueryChanged(query: String) {
+        _searchQuery.value = query
+    }
 
     fun cancelDownload(url: String) {
         downloadRepository.cancelDownload(url)

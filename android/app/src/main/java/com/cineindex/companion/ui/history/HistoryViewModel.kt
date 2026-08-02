@@ -13,14 +13,32 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 
 @HiltViewModel
 class HistoryViewModel @Inject constructor(
     private val historyDao: HistoryDao
 ) : ViewModel() {
 
-    val historyItems: StateFlow<List<HistoryEntity>> = historyDao.getRecentHistory(50)
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    private val _searchQuery = MutableStateFlow("")
+    val searchQuery: StateFlow<String> = _searchQuery
+
+    val historyItems: StateFlow<List<HistoryEntity>> = combine(
+        historyDao.getRecentHistory(50),
+        _searchQuery
+    ) { list, query ->
+        if (query.isBlank()) list else list.filter { it.filename.contains(query, ignoreCase = true) }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val hasAnyHistory: StateFlow<Boolean> = historyDao.getRecentHistory(50)
+        .map { it.isNotEmpty() }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+
+    fun onSearchQueryChanged(query: String) {
+        _searchQuery.value = query
+    }
 
     fun deleteHistory(url: String) {
         viewModelScope.launch {
