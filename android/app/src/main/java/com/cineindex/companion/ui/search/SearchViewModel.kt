@@ -82,7 +82,7 @@ class SearchViewModel @Inject constructor(
 
     private suspend fun loadInternalDatabase() {
         kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-            val dbFile = appContext.getDatabasePath("media_readonly")
+            val dbFile = getMediaDatabaseFile()
             val internalRootsFile = File(appContext.filesDir, "roots.json")
 
             if (dbFile.exists()) {
@@ -100,9 +100,7 @@ class SearchViewModel @Inject constructor(
                     // If Room fails to open (e.g. schema mismatch, corruption, missing hash), 
                     // delete the invalid file to prevent crash loops and reset state.
                     mediaDatabaseProvider.close()
-                    dbFile.delete()
-                    appContext.getDatabasePath("media_readonly-shm").delete()
-                    appContext.getDatabasePath("media_readonly-wal").delete()
+                    deleteDatabaseArtifacts(dbFile)
                     _dbLoaded.value = false
                     return@withContext
                 }
@@ -140,15 +138,14 @@ class SearchViewModel @Inject constructor(
                     return@withContext
                 }
 
-                val dbFile = appContext.getDatabasePath("media_readonly")
+                val dbFile = getMediaDatabaseFile()
                 dbFile.parentFile?.mkdirs()
                 
                 val internalRootsFile = File(appContext.filesDir, "roots.json")
 
                 // Close any existing open database before overwriting the file to prevent corruption!
                 mediaDatabaseProvider.close()
-                appContext.getDatabasePath("media_readonly-shm").delete()
-                appContext.getDatabasePath("media_readonly-wal").delete()
+                deleteDatabaseArtifacts(dbFile)
 
                 // Copy DB to internal storage
                 appContext.contentResolver.openInputStream(dbDocFile.uri)?.use { input ->
@@ -203,5 +200,13 @@ class SearchViewModel @Inject constructor(
 
     fun getFormattedSize(media: MediaEntity): String? {
         return FilenameUtils.formatSize(media.size)
+    }
+
+    private fun getMediaDatabaseFile(): File = appContext.getDatabasePath("media_readonly")
+
+    private fun deleteDatabaseArtifacts(dbFile: File) {
+        dbFile.delete()
+        appContext.getDatabasePath("${dbFile.name}-shm").delete()
+        appContext.getDatabasePath("${dbFile.name}-wal").delete()
     }
 }
