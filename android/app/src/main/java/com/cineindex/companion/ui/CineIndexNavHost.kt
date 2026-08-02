@@ -1,5 +1,7 @@
 package com.cineindex.companion.ui
 
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Download
@@ -119,12 +121,21 @@ fun CineIndexNavHost() {
         NavHost(
             navController = navController,
             startDestination = Screen.Search.route,
-            modifier = Modifier.padding(innerPadding)
+            modifier = Modifier.fillMaxSize()
         ) {
-            composable(Screen.Search.route) { SearchScreen() }
-            composable(Screen.History.route) { HistoryScreen() }
-            composable(Screen.Downloads.route) { DownloadsScreen() }
-            composable(Screen.Settings.route) { SettingsScreen(onBack = { navController.popBackStack() }) }
+            composable(Screen.Search.route) {
+                Box(modifier = Modifier.padding(innerPadding)) { SearchScreen() }
+            }
+            composable(Screen.History.route) {
+                Box(modifier = Modifier.padding(innerPadding)) { HistoryScreen() }
+            }
+            composable(Screen.Downloads.route) {
+                Box(modifier = Modifier.padding(innerPadding)) { DownloadsScreen() }
+            }
+            composable(Screen.Settings.route) { 
+                // Settings uses its own Scaffold so it handles its own insets
+                SettingsScreen(onBack = { navController.popBackStack() }) 
+            }
         }
     }
 }
