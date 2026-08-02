@@ -7,6 +7,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -30,7 +31,6 @@ fun SettingsScreen(
 ) {
     val context = LocalContext.current
     val dbFolderUri by viewModel.dbFolderUri.collectAsStateWithLifecycle()
-    val downloadFolderUri by viewModel.downloadFolderUri.collectAsStateWithLifecycle()
     val mediaCount by viewModel.mediaCount.collectAsStateWithLifecycle()
 
     val dbFolderLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
@@ -43,16 +43,6 @@ fun SettingsScreen(
         }
     }
 
-    val downloadFolderLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
-        if (uri != null) {
-            context.contentResolver.takePersistableUriPermission(
-                uri,
-                Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
-            )
-            viewModel.setDownloadFolderUri(uri.toString())
-        }
-    }
-
     Scaffold(
         topBar = {
             TopAppBar(
@@ -61,7 +51,11 @@ fun SettingsScreen(
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
-                }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.background,
+                    titleContentColor = MaterialTheme.colorScheme.onBackground
+                )
             )
         }
     ) { padding ->
@@ -69,63 +63,78 @@ fun SettingsScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 16.dp)
+                .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Storage Section
             Text(
                 text = "Storage",
                 style = MaterialTheme.typography.titleSmall,
                 color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.padding(start = 16.dp, top = 16.dp, bottom = 8.dp)
+                modifier = Modifier.padding(start = 8.dp)
             )
 
-            SettingItem(
-                icon = { Icon(Icons.Filled.Folder, contentDescription = null) },
-                title = "Database Folder",
-                subtitle = dbFolderUri?.let { Uri.parse(it).lastPathSegment } ?: "Not set",
-                onClick = { dbFolderLauncher.launch(null) }
-            )
+            Card(
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                SettingItem(
+                    icon = { Icon(Icons.Filled.Folder, contentDescription = null) },
+                    title = "Database Folder",
+                    subtitle = dbFolderUri?.let { Uri.parse(it).lastPathSegment } ?: "Not set",
+                    onClick = { dbFolderLauncher.launch(null) }
+                )
+            }
 
-            SettingItem(
-                icon = { Icon(Icons.Filled.Folder, contentDescription = null) },
-                title = "Downloads Folder",
-                subtitle = downloadFolderUri?.let { Uri.parse(it).lastPathSegment } ?: "Not set",
-                onClick = { downloadFolderLauncher.launch(null) }
-            )
-
-            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-
+            // Database Section
             Text(
                 text = "Database",
                 style = MaterialTheme.typography.titleSmall,
                 color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.padding(start = 16.dp, top = 8.dp, bottom = 8.dp)
+                modifier = Modifier.padding(start = 8.dp)
             )
 
-            val isDbLoading by viewModel.isDbLoading.collectAsStateWithLifecycle()
+            Card(
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column {
+                    val isDbLoading by viewModel.isDbLoading.collectAsStateWithLifecycle()
 
-            SettingItem(
-                icon = { 
-                    if (isDbLoading) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(24.dp),
-                            color = MaterialTheme.colorScheme.primary,
-                            strokeWidth = 2.dp
-                        )
-                    } else {
-                        Icon(Icons.Filled.Refresh, contentDescription = null)
-                    }
-                },
-                title = "Reload Database",
-                subtitle = if (isDbLoading) "Loading database..." else "Force reload from the database folder",
-                onClick = { if (!isDbLoading) viewModel.reloadDatabase() }
-            )
+                    SettingItem(
+                        icon = { 
+                            if (isDbLoading) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(24.dp),
+                                    color = MaterialTheme.colorScheme.primary,
+                                    strokeWidth = 2.dp
+                                )
+                            } else {
+                                Icon(Icons.Filled.Refresh, contentDescription = null)
+                            }
+                        },
+                        title = "Reload Database",
+                        subtitle = if (isDbLoading) "Loading database..." else "Force reload from the database folder",
+                        onClick = { if (!isDbLoading) viewModel.reloadDatabase() }
+                    )
 
-            SettingItem(
-                icon = { Icon(Icons.Filled.Info, contentDescription = null) },
-                title = "Database Stats",
-                subtitle = if (mediaCount > 0) "$mediaCount entries indexed" else "Database not loaded",
-                onClick = {}
-            )
+                    HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant, modifier = Modifier.padding(horizontal = 16.dp))
+
+                    SettingItem(
+                        icon = { Icon(Icons.Filled.Info, contentDescription = null) },
+                        title = "Database Stats",
+                        subtitle = if (mediaCount > 0) "$mediaCount entries indexed" else "Database not loaded",
+                        onClick = {}
+                    )
+                }
+            }
+            
+            Spacer(modifier = Modifier.height(32.dp))
         }
     }
 }

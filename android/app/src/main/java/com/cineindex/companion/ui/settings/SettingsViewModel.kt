@@ -21,9 +21,6 @@ class SettingsViewModel @Inject constructor(
     val dbFolderUri: StateFlow<String?> = appPreferences.dbFolderUri
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
-    val downloadFolderUri: StateFlow<String?> = appPreferences.downloadFolderUri
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
-
     private val _mediaCount = MutableStateFlow(0)
     val mediaCount: StateFlow<Int> = _mediaCount
 
@@ -46,11 +43,7 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    fun setDownloadFolderUri(uri: String) {
-        viewModelScope.launch {
-            appPreferences.setDownloadFolderUri(uri)
-        }
-    }
+
 
     fun reloadDatabase() {
         // Clear and re-set the URI to force SearchViewModel to reload the database

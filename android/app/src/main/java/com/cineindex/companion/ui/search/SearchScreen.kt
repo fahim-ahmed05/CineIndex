@@ -27,6 +27,10 @@ import com.cineindex.companion.data.db.MediaEntity
 import com.cineindex.companion.data.db.HistoryEntity
 import com.cineindex.companion.ui.history.HistoryViewModel
 
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalFocusManager
+
 @OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun SearchScreen(
@@ -34,6 +38,7 @@ fun SearchScreen(
     historyViewModel: HistoryViewModel = hiltViewModel()
 ) {
     val context = LocalContext.current
+    val focusManager = LocalFocusManager.current
     val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
     val searchResults by viewModel.searchResults.collectAsStateWithLifecycle()
     val isLoading by viewModel.isLoading.collectAsStateWithLifecycle()
@@ -41,7 +46,15 @@ fun SearchScreen(
     val dbLoaded by viewModel.dbLoaded.collectAsStateWithLifecycle()
     val history by historyViewModel.history.collectAsStateWithLifecycle()
 
-    Column(modifier = Modifier.fillMaxSize()) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .pointerInput(Unit) {
+                detectTapGestures(onTap = {
+                    focusManager.clearFocus()
+                })
+            }
+    ) {
         // Search bar
         if (dbLoaded) {
             OutlinedTextField(
@@ -239,14 +252,29 @@ private fun MediaResultItem(
                 overflow = TextOverflow.Ellipsis
             )
 
-            // Size (optional, if available)
-            if (subtitle != null) {
-                Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(2.dp))
+
+            // Root and Path row
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
                 Text(
-                    text = subtitle,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.secondary
+                    text = "[$root] $path",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f)
                 )
+                if (subtitle != null) {
+                    Text(
+                        text = subtitle,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.secondary,
+                        modifier = Modifier.padding(start = 8.dp)
+                    )
+                }
             }
         }
     }
