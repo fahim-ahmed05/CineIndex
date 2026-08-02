@@ -45,10 +45,18 @@ class SettingsViewModel @Inject constructor(
     }
 
     fun reloadDatabase() {
-        // Triggered by forcing a reload in the DB provider, but since SearchViewModel
-        // handles the actual DB copying/loading from SAF, we'd typically trigger an event there.
-        // For now, we update the stats to show if it's currently loaded.
-        updateStats()
+        // Clear and re-set the URI to force SearchViewModel to reload the database
+        val uri = dbFolderUri.value
+        if (uri != null) {
+            viewModelScope.launch {
+                appPreferences.setDbFolderUri("")
+                kotlinx.coroutines.delay(100)
+                appPreferences.setDbFolderUri(uri)
+                updateStats()
+            }
+        } else {
+            updateStats()
+        }
     }
 
     private fun updateStats() {

@@ -83,64 +83,66 @@ class SearchViewModel @Inject constructor(
     }
 
     private suspend fun loadDatabase(folderUriStr: String) {
-        try {
-            val folderUri = Uri.parse(folderUriStr)
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            try {
+                val folderUri = Uri.parse(folderUriStr)
 
-            // Try to find media_index.db in the folder
-            val docFile = DocumentFile.fromTreeUri(appContext, folderUri)
-            
-            var dbDocFile = docFile?.findFile("media_index.db")
-            if (dbDocFile == null) {
-                // Fallback for Android SAF display name quirks (sometimes strips extension or adds numbers)
-                dbDocFile = docFile?.listFiles()?.find {
-                    val name = it.name ?: ""
-                    name == "media_index" || (name.startsWith("media_index") && name.endsWith(".db"))
+                // Try to find media_index.db in the folder
+                val docFile = DocumentFile.fromTreeUri(appContext, folderUri)
+                
+                var dbDocFile = docFile?.findFile("media_index.db")
+                if (dbDocFile == null) {
+                    // Fallback for Android SAF display name quirks (sometimes strips extension or adds numbers)
+                    dbDocFile = docFile?.listFiles()?.find {
+                        val name = it.name ?: ""
+                        name == "media_index" || (name.startsWith("media_index") && name.endsWith(".db"))
+                    }
                 }
-            }
 
-            var rootsDocFile = docFile?.findFile("roots.json")
-            if (rootsDocFile == null) {
-                rootsDocFile = docFile?.listFiles()?.find {
-                    val name = it.name ?: ""
-                    name == "roots" || (name.startsWith("roots") && name.endsWith(".json"))
+                var rootsDocFile = docFile?.findFile("roots.json")
+                if (rootsDocFile == null) {
+                    rootsDocFile = docFile?.listFiles()?.find {
+                        val name = it.name ?: ""
+                        name == "roots" || (name.startsWith("roots") && name.endsWith(".json"))
+                    }
                 }
-            }
 
-            if (dbDocFile == null || !dbDocFile.exists()) {
-                _dbLoaded.value = false
-                return
-            }
-
-            // Copy DB to internal storage for Room to open (Room can't open SAF URIs directly)
-            val internalDbFile = File(appContext.filesDir, "media_index.db")
-            appContext.contentResolver.openInputStream(dbDocFile.uri)?.use { input ->
-                internalDbFile.outputStream().use { output ->
-                    input.copyTo(output)
+                if (dbDocFile == null || !dbDocFile.exists()) {
+                    _dbLoaded.value = false
+                    return@withContext
                 }
-            }
 
-            // Load roots.json if available
-            if (rootsDocFile != null && rootsDocFile.exists()) {
-                val internalRootsFile = File(appContext.filesDir, "roots.json")
-                appContext.contentResolver.openInputStream(rootsDocFile.uri)?.use { input ->
-                    internalRootsFile.outputStream().use { output ->
+                // Copy DB to internal storage for Room to open (Room can't open SAF URIs directly)
+                val internalDbFile = File(appContext.filesDir, "media_index.db")
+                appContext.contentResolver.openInputStream(dbDocFile.uri)?.use { input ->
+                    internalDbFile.outputStream().use { output ->
                         input.copyTo(output)
                     }
                 }
-                rootsConfig.load(internalRootsFile)
-            }
 
-            // Open database
-            val db = mediaDatabaseProvider.open(appContext, internalDbFile)
-            if (db != null) {
-                val dao = db.mediaDao()
-                mediaDao = dao
-                searchEngine = SearchEngine(dao)
-                _mediaCount.value = dao.getCount()
-                _dbLoaded.value = true
+                // Load roots.json if available
+                if (rootsDocFile != null && rootsDocFile.exists()) {
+                    val internalRootsFile = File(appContext.filesDir, "roots.json")
+                    appContext.contentResolver.openInputStream(rootsDocFile.uri)?.use { input ->
+                        internalRootsFile.outputStream().use { output ->
+                            input.copyTo(output)
+                        }
+                    }
+                    rootsConfig.load(internalRootsFile)
+                }
+
+                // Open database
+                val db = mediaDatabaseProvider.open(appContext, internalDbFile)
+                if (db != null) {
+                    val dao = db.mediaDao()
+                    mediaDao = dao
+                    searchEngine = SearchEngine(dao)
+                    _mediaCount.value = dao.getCount()
+                    _dbLoaded.value = true
+                }
+            } catch (e: Exception) {
+                _dbLoaded.value = false
             }
-        } catch (e: Exception) {
-            _dbLoaded.value = false
         }
     }
 
