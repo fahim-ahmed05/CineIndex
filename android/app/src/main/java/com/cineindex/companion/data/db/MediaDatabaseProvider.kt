@@ -25,24 +25,19 @@ class MediaDatabaseProvider {
     }
 
     /**
-     * Open the synced media_index.db at the given path.
+     * Open the synced media_readonly database.
      * Returns null if the file doesn't exist.
      */
-    fun open(context: Context, dbFile: File): MediaDatabase? {
+    fun open(context: Context): MediaDatabase? {
         close()
+        val dbFile = context.getDatabasePath("media_readonly")
         if (!dbFile.exists()) return null
-
-        // Delete existing Room database to force createFromFile to copy the new dbFile
-        context.getDatabasePath("media_readonly").delete()
-        context.getDatabasePath("media_readonly-shm").delete()
-        context.getDatabasePath("media_readonly-wal").delete()
 
         val db = Room.databaseBuilder(
             context.applicationContext,
             MediaDatabase::class.java,
             "media_readonly"
         )
-            .createFromFile(dbFile)
             .fallbackToDestructiveMigration()
             .build()
 

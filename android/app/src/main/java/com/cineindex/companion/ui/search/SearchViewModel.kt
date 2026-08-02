@@ -89,12 +89,12 @@ class SearchViewModel @Inject constructor(
 
     private suspend fun loadInternalDatabase() {
         kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-            val internalDbFile = File(appContext.filesDir, "media_index.db")
+            val dbFile = appContext.getDatabasePath("media_readonly")
             val internalRootsFile = File(appContext.filesDir, "roots.json")
 
-            if (internalDbFile.exists()) {
+            if (dbFile.exists()) {
                 if (internalRootsFile.exists()) rootsConfig.load(internalRootsFile)
-                val db = mediaDatabaseProvider.open(appContext, internalDbFile)
+                val db = mediaDatabaseProvider.open(appContext)
                 if (db != null) {
                     val dao = db.mediaDao()
                     mediaDao = dao
@@ -137,15 +137,19 @@ class SearchViewModel @Inject constructor(
                     return@withContext
                 }
 
-                val internalDbFile = File(appContext.filesDir, "media_index.db")
+                val dbFile = appContext.getDatabasePath("media_readonly")
+                dbFile.parentFile?.mkdirs()
+                
                 val internalRootsFile = File(appContext.filesDir, "roots.json")
 
                 // Close any existing open database before overwriting the file to prevent corruption!
                 mediaDatabaseProvider.close()
+                appContext.getDatabasePath("media_readonly-shm").delete()
+                appContext.getDatabasePath("media_readonly-wal").delete()
 
                 // Copy DB to internal storage
                 appContext.contentResolver.openInputStream(dbDocFile.uri)?.use { input ->
-                    internalDbFile.outputStream().use { output ->
+                    dbFile.outputStream().use { output ->
                         input.copyTo(output)
                     }
                 }
