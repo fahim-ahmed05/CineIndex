@@ -145,6 +145,10 @@ class DownloadWorker @AssistedInject constructor(
             .setProgress(max, progress, false)
             .build()
 
-        return ForegroundInfo(NOTIFICATION_ID, notification)
+        if (android.os.Build.VERSION.SDK_INT >= 34) { // Android 14+
+            return ForegroundInfo(NOTIFICATION_ID, notification, android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC)
+        } else {
+            return ForegroundInfo(NOTIFICATION_ID, notification)
+        }
     }
 }

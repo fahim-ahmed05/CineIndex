@@ -68,11 +68,12 @@ class PlaybackService : MediaSessionService() {
         if (mediaItem == null) return
         val url = mediaItem.localConfiguration?.uri?.toString() ?: return
         val title = mediaItem.mediaMetadata.title?.toString() ?: "Unknown"
+        val currentDuration = player?.duration ?: 0L
 
         serviceScope.launch {
             // Check if we already have it to preserve start time, or create new
             val existing = historyDao.getByUrl(url)
-            val duration = player?.duration?.takeIf { it > 0 } ?: existing?.durationMs ?: 0L
+            val duration = currentDuration.takeIf { it > 0 } ?: existing?.durationMs ?: 0L
             
             // If completed, keep position at end, otherwise use provided position
             val savedPosition = if (isCompleted) duration else positionMs
