@@ -88,8 +88,23 @@ class SearchViewModel @Inject constructor(
 
             // Try to find media_index.db in the folder
             val docFile = DocumentFile.fromTreeUri(appContext, folderUri)
-            val dbDocFile = docFile?.findFile("media_index.db")
-            val rootsDocFile = docFile?.findFile("roots.json")
+            
+            var dbDocFile = docFile?.findFile("media_index.db")
+            if (dbDocFile == null) {
+                // Fallback for Android SAF display name quirks (sometimes strips extension or adds numbers)
+                dbDocFile = docFile?.listFiles()?.find {
+                    val name = it.name ?: ""
+                    name == "media_index" || (name.startsWith("media_index") && name.endsWith(".db"))
+                }
+            }
+
+            var rootsDocFile = docFile?.findFile("roots.json")
+            if (rootsDocFile == null) {
+                rootsDocFile = docFile?.listFiles()?.find {
+                    val name = it.name ?: ""
+                    name == "roots" || (name.startsWith("roots") && name.endsWith(".json"))
+                }
+            }
 
             if (dbDocFile == null || !dbDocFile.exists()) {
                 _dbLoaded.value = false
