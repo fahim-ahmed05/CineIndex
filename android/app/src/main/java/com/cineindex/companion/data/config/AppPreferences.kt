@@ -26,19 +26,9 @@ class AppPreferences(private val context: Context) {
         prefs[KEY_DB_FOLDER_URI]
     }
 
-    val downloadFolderUri: Flow<String?> = context.dataStore.data.map { prefs ->
-        prefs[KEY_DOWNLOAD_FOLDER_URI]
-    }
-
     suspend fun setDbFolderUri(uri: String) {
         context.dataStore.edit { prefs ->
             prefs[KEY_DB_FOLDER_URI] = uri
-        }
-    }
-
-    suspend fun setDownloadFolderUri(uri: String) {
-        context.dataStore.edit { prefs ->
-            prefs[KEY_DOWNLOAD_FOLDER_URI] = uri
         }
     }
 }

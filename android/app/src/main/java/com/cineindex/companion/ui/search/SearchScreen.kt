@@ -24,7 +24,6 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.cineindex.companion.data.db.MediaEntity
-import com.cineindex.companion.data.db.HistoryEntity
 import com.cineindex.companion.ui.history.HistoryViewModel
 
 import androidx.compose.foundation.gestures.detectTapGestures

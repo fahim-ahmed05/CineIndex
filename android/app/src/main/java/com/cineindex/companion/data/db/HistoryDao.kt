@@ -22,18 +22,6 @@ interface HistoryDao {
     suspend fun upsert(entry: HistoryEntity)
 
     /**
-     * Delete a single history entry by URL.
-     */
-    @Query("DELETE FROM history WHERE url = :url")
-    suspend fun deleteByUrl(url: String)
-
-    /**
-     * Get a history entry to check for resume position.
-     */
-    @Query("SELECT * FROM history WHERE url = :url")
-    suspend fun getByUrl(url: String): HistoryEntity?
-
-    /**
      * Keep only the most recent N entries, evicting the oldest.
      */
     @Query("""

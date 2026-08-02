@@ -72,19 +72,6 @@ class RootsConfig {
 
     fun dotsToSpaces(rootUrl: String): Boolean = getSettings(rootUrl)?.dotsToSpaces ?: false
 
-    fun getAllRootUrls(): Set<String> = rootMap.keys
-
-    /**
-     * Get all root URLs that share the same tag as the given root.
-     */
-    fun getRootsWithSameTag(rootUrl: String): List<String> {
-        val tag = getTag(rootUrl)
-        if (tag.isEmpty()) return listOf(rootUrl)
-        return rootMap.entries
-            .filter { it.value.tag == tag }
-            .map { it.key }
-    }
-
     private fun normalizeUrl(url: String): String {
         return if (url.isNotEmpty() && !url.endsWith("/")) "$url/" else url
     }

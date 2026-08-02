@@ -8,7 +8,6 @@ import androidx.lifecycle.viewModelScope
 import com.cineindex.companion.data.config.AppPreferences
 import com.cineindex.companion.data.config.RootsConfig
 import com.cineindex.companion.data.db.MediaDatabaseProvider
-import com.cineindex.companion.data.db.MediaDao
 import com.cineindex.companion.data.db.MediaEntity
 import com.cineindex.companion.data.search.FilenameUtils
 import com.cineindex.companion.data.search.SearchEngine
@@ -51,7 +50,6 @@ class SearchViewModel @Inject constructor(
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(), false)
 
     private var searchEngine: SearchEngine? = null
-    private var mediaDao: MediaDao? = null
 
     init {
         // Initial fast-load from internal storage
@@ -61,11 +59,14 @@ class SearchViewModel @Inject constructor(
 
         // Sync from SAF only when the URI actually changes (e.g., set for the first time or manually reloaded)
         viewModelScope.launch {
-            appPreferences.dbFolderUri.drop(1).collect { uriStr ->
-                if (!uriStr.isNullOrEmpty()) {
-                    syncDatabaseFromSaf(uriStr)
+            appPreferences.dbFolderUri
+                .drop(1)
+                .distinctUntilChanged()
+                .collect { uriStr ->
+                    if (!uriStr.isNullOrEmpty()) {
+                        syncDatabaseFromSaf(uriStr)
+                    }
                 }
-            }
         }
 
         // Debounced search
@@ -89,7 +90,6 @@ class SearchViewModel @Inject constructor(
                     if (internalRootsFile.exists()) rootsConfig.load(internalRootsFile)
                     val dao = mediaDatabaseProvider.open(appContext, dbFile)
                     if (dao != null) {
-                        mediaDao = dao
                         searchEngine = SearchEngine(dao)
                         _mediaCount.value = dao.getCount()
                         _dbLoaded.value = true
@@ -203,20 +203,5 @@ class SearchViewModel @Inject constructor(
 
     fun getFormattedSize(media: MediaEntity): String? {
         return FilenameUtils.formatSize(media.size)
-    }
-
-    // --- Actions ---
-
-    fun playMedia(media: MediaEntity, context: Context) {
-        viewModelScope.launch {
-            try {
-                // Instantly record to history
-                // We'll inject HistoryViewModel in the UI and call it from there, or we can just send an intent here.
-                // Wait, it's cleaner to let the UI handle the Intent because it has the Activity context.
-                // So we don't even need playMedia in the ViewModel anymore.
-            } catch (e: Exception) {
-                // Ignore for now
-            }
-        }
     }
 }
