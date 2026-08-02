@@ -7,16 +7,11 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.cineindex.companion.data.config.AppPreferences
 import com.cineindex.companion.data.config.RootsConfig
-import com.cineindex.companion.data.db.DownloadDao
-import com.cineindex.companion.data.db.DownloadEntity
 import com.cineindex.companion.data.db.MediaDatabaseProvider
 import com.cineindex.companion.data.db.MediaDao
 import com.cineindex.companion.data.db.MediaEntity
 import com.cineindex.companion.data.search.FilenameUtils
 import com.cineindex.companion.data.search.SearchEngine
-import com.cineindex.companion.player.PlaylistBuilder
-import com.cineindex.companion.download.DownloadRepository
-import com.cineindex.companion.ui.player.PlayerActivity
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.FlowPreview
@@ -32,9 +27,6 @@ class SearchViewModel @Inject constructor(
     private val mediaDatabaseProvider: MediaDatabaseProvider,
     private val rootsConfig: RootsConfig,
     private val appPreferences: AppPreferences,
-    private val downloadDao: DownloadDao,
-    private val playlistBuilder: PlaylistBuilder,
-    private val downloadRepository: DownloadRepository,
 ) : ViewModel() {
 
     private val _searchQuery = MutableStateFlow("")
@@ -52,7 +44,7 @@ class SearchViewModel @Inject constructor(
     private val _selectedItems = MutableStateFlow<Set<String>>(emptySet())
     val selectedItems: StateFlow<Set<String>> = _selectedItems
 
-    private val _dbLoaded = MutableStateFlow(false)
+    private val _dbLoaded = MutableStateFlow(true)
     val dbLoaded: StateFlow<Boolean> = _dbLoaded
 
     val isMultiSelectMode: StateFlow<Boolean> = _selectedItems.map { it.isNotEmpty() }
@@ -213,72 +205,18 @@ class SearchViewModel @Inject constructor(
         return FilenameUtils.formatSize(media.size)
     }
 
-    // --- Selection ---
-
-    fun toggleSelection(url: String) {
-        _selectedItems.value = _selectedItems.value.toMutableSet().apply {
-            if (contains(url)) remove(url) else add(url)
-        }
-    }
-
-    fun clearSelection() {
-        _selectedItems.value = emptySet()
-    }
-
     // --- Actions ---
 
     fun playMedia(media: MediaEntity, context: Context) {
         viewModelScope.launch {
             try {
-                val dao = mediaDao ?: return@launch
-                val (playlist, startIndex) = playlistBuilder.buildPlaylist(media, dao)
-                PlayerActivity.launch(context, playlist, startIndex, 0L)
+                // Instantly record to history
+                // We'll inject HistoryViewModel in the UI and call it from there, or we can just send an intent here.
+                // Wait, it's cleaner to let the UI handle the Intent because it has the Activity context.
+                // So we don't even need playMedia in the ViewModel anymore.
             } catch (e: Exception) {
                 // Ignore for now
             }
-        }
-    }
-
-    fun playSelected(context: Context) {
-        viewModelScope.launch {
-            val results = _searchResults.value
-            val playlist = _selectedItems.value.mapNotNull { url ->
-                val media = results.find { it.url == url }
-                media?.let {
-                    androidx.media3.common.MediaItem.Builder()
-                        .setUri(it.url)
-                        .setMediaId(it.url)
-                        .setMediaMetadata(
-                            androidx.media3.common.MediaMetadata.Builder()
-                                .setTitle(FilenameUtils.prettyFilename(it.filename, rootsConfig.dotsToSpaces(it.root)))
-                                .setSubtitle(it.path)
-                                .build()
-                        )
-                        .build()
-                }
-            }
-
-            if (playlist.isNotEmpty()) {
-                PlayerActivity.launch(context, playlist, 0, 0L)
-            }
-            clearSelection()
-        }
-    }
-
-    fun downloadMedia(media: MediaEntity) {
-        viewModelScope.launch {
-            downloadRepository.enqueueDownload(media.url, media.filename)
-        }
-    }
-
-    fun downloadSelected() {
-        viewModelScope.launch {
-            val results = _searchResults.value
-            for (url in _selectedItems.value) {
-                val media = results.find { it.url == url } ?: continue
-                downloadRepository.enqueueDownload(media.url, media.filename)
-            }
-            clearSelection()
         }
     }
 }

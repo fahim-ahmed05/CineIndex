@@ -4,18 +4,10 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Download
-import androidx.compose.material.icons.filled.History
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.outlined.Download
-import androidx.compose.material.icons.outlined.History
-import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -31,24 +23,13 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import com.cineindex.companion.ui.downloads.DownloadsScreen
-import com.cineindex.companion.ui.history.HistoryScreen
 import com.cineindex.companion.ui.search.SearchScreen
 import com.cineindex.companion.ui.settings.SettingsScreen
 
-sealed class Screen(
-    val route: String,
-    val title: String,
-    val selectedIcon: ImageVector,
-    val unselectedIcon: ImageVector
-) {
-    data object Search : Screen("search", "Search", Icons.Filled.Search, Icons.Outlined.Search)
-    data object History : Screen("history", "History", Icons.Filled.History, Icons.Outlined.History)
-    data object Downloads : Screen("downloads", "Downloads", Icons.Filled.Download, Icons.Outlined.Download)
-    data object Settings : Screen("settings", "Settings", Icons.Filled.Settings, Icons.Filled.Settings)
+sealed class Screen(val route: String) {
+    data object Search : Screen("search")
+    data object Settings : Screen("settings")
 }
-
-private val bottomNavScreens = listOf(Screen.Search, Screen.History, Screen.Downloads)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -58,12 +39,9 @@ fun CineIndexNavHost() {
     val currentDestination = navBackStackEntry?.destination
     val currentRoute = currentDestination?.route
 
-    // Hide chrome on settings and player screens
-    val showBottomBar = currentRoute in bottomNavScreens.map { it.route }
-
     Scaffold(
         topBar = {
-            if (showBottomBar) {
+            if (currentRoute == Screen.Search.route) {
                 TopAppBar(
                     title = {
                         Text(
@@ -86,36 +64,6 @@ fun CineIndexNavHost() {
                     )
                 )
             }
-        },
-        bottomBar = {
-            if (showBottomBar) {
-                NavigationBar(
-                    containerColor = MaterialTheme.colorScheme.surfaceContainer
-                ) {
-                    bottomNavScreens.forEach { screen ->
-                        val selected = currentDestination?.hierarchy?.any { it.route == screen.route } == true
-                        NavigationBarItem(
-                            icon = {
-                                Icon(
-                                    if (selected) screen.selectedIcon else screen.unselectedIcon,
-                                    contentDescription = screen.title
-                                )
-                            },
-                            label = { Text(screen.title) },
-                            selected = selected,
-                            onClick = {
-                                navController.navigate(screen.route) {
-                                    popUpTo(navController.graph.findStartDestination().id) {
-                                        saveState = true
-                                    }
-                                    launchSingleTop = true
-                                    restoreState = true
-                                }
-                            }
-                        )
-                    }
-                }
-            }
         }
     ) { innerPadding ->
         NavHost(
@@ -126,14 +74,7 @@ fun CineIndexNavHost() {
             composable(Screen.Search.route) {
                 Box(modifier = Modifier.padding(innerPadding)) { SearchScreen() }
             }
-            composable(Screen.History.route) {
-                Box(modifier = Modifier.padding(innerPadding)) { HistoryScreen() }
-            }
-            composable(Screen.Downloads.route) {
-                Box(modifier = Modifier.padding(innerPadding)) { DownloadsScreen() }
-            }
             composable(Screen.Settings.route) { 
-                // Settings uses its own Scaffold so it handles its own insets
                 SettingsScreen(onBack = { navController.popBackStack() }) 
             }
         }

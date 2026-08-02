@@ -5,7 +5,6 @@ import androidx.room.Room
 import com.cineindex.companion.data.config.AppPreferences
 import com.cineindex.companion.data.config.RootsConfig
 import com.cineindex.companion.data.db.AppDatabase
-import com.cineindex.companion.data.db.DownloadDao
 import com.cineindex.companion.data.db.HistoryDao
 import com.cineindex.companion.data.db.MediaDatabaseProvider
 import dagger.Module
@@ -13,7 +12,6 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
-import okhttp3.OkHttpClient
 import javax.inject.Singleton
 
 @Module
@@ -34,9 +32,6 @@ object AppModule {
     fun provideHistoryDao(db: AppDatabase): HistoryDao = db.historyDao()
 
     @Provides
-    fun provideDownloadDao(db: AppDatabase): DownloadDao = db.downloadDao()
-
-    @Provides
     @Singleton
     fun provideMediaDatabaseProvider(): MediaDatabaseProvider = MediaDatabaseProvider()
 
@@ -49,10 +44,4 @@ object AppModule {
     @Provides
     @Singleton
     fun provideRootsConfig(): RootsConfig = RootsConfig()
-
-    @Provides
-    @Singleton
-    fun provideOkHttpClient(): OkHttpClient {
-        return OkHttpClient.Builder().build()
-    }
 }

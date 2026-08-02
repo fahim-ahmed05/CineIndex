@@ -13,7 +13,7 @@ interface HistoryDao {
      * Get recent history, most recent first, limited to [limit] entries.
      */
     @Query("SELECT * FROM history ORDER BY playedAt DESC LIMIT :limit")
-    fun getRecentHistory(limit: Int = 50): Flow<List<HistoryEntity>>
+    fun getRecentHistory(limit: Int = 20): Flow<List<HistoryEntity>>
 
     /**
      * Insert or update a history entry (upsert by URL).
@@ -41,7 +41,7 @@ interface HistoryDao {
             SELECT url FROM history ORDER BY playedAt DESC LIMIT :keep
         )
     """)
-    suspend fun evictOldEntries(keep: Int = 50)
+    suspend fun evictOldEntries(keep: Int = 20)
 
     /**
      * Get total history count.

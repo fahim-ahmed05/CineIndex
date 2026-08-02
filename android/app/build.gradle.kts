@@ -72,25 +72,12 @@ dependencies {
     implementation(libs.hilt.android)
     ksp(libs.hilt.compiler)
     implementation(libs.androidx.hilt.navigation.compose)
-    implementation(libs.androidx.hilt.work)
-    ksp(libs.androidx.hilt.compiler)
-
-    // Media3 (ExoPlayer)
-    implementation(libs.androidx.media3.exoplayer)
-    implementation(libs.androidx.media3.ui)
-    implementation(libs.androidx.media3.session)
-
-    // Networking
-    implementation(libs.okhttp)
 
     // DataStore
     implementation(libs.androidx.datastore.preferences)
 
     // Gson
     implementation(libs.gson)
-
-    // WorkManager
-    implementation(libs.androidx.work.runtime.ktx)
 
     // DocumentFile
     implementation("androidx.documentfile:documentfile:1.0.1")

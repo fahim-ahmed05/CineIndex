@@ -7,37 +7,33 @@ val Purple80 = Color(0xFFD0BCFF)
 val PurpleGrey80 = Color(0xFFCCC2DC)
 val Pink80 = Color(0xFFEFB8C8)
 
-// Primary: Magenta/Purple (matching TUI banner color)
-val Primary = Color(0xFFBB86FC)
-val PrimaryDark = Color(0xFF9C27B0)
-val PrimaryContainer = Color(0xFF3700B3)
+// Primary: Gruvbox Orange
+val Primary = Color(0xFFfe8019)
+val PrimaryDark = Color(0xFFd65d0e)
+val PrimaryContainer = Color(0xFFd65d0e)
 val OnPrimary = Color(0xFF000000)
-val OnPrimaryContainer = Color(0xFFEADDFF)
+val OnPrimaryContainer = Color(0xFFfbf1c7)
 
-// Secondary: Cyan (matching TUI accent color)
-val Secondary = Color(0xFF03DAC6)
-val SecondaryContainer = Color(0xFF005249)
+// Secondary: Gruvbox Yellow
+val Secondary = Color(0xFFfabd2f)
+val SecondaryContainer = Color(0xFFd79921)
 val OnSecondary = Color(0xFF000000)
-val OnSecondaryContainer = Color(0xFFA0F0E4)
+val OnSecondaryContainer = Color(0xFFfbf1c7)
 
-// Tertiary
-val Tertiary = Color(0xFFEFB8C8)
-val TertiaryContainer = Color(0xFF633B48)
+// Tertiary: Gruvbox Aqua
+val Tertiary = Color(0xFF8ec07c)
+val TertiaryContainer = Color(0xFF689d6a)
 
 // Surface / Background (AMOLED Black)
 val Surface = Color(0xFF000000)
-val SurfaceVariant = Color(0xFF121212)
+val SurfaceVariant = Color(0xFF1d2021)
 val SurfaceContainer = Color(0xFF000000)
-val SurfaceContainerHigh = Color(0xFF1A1A1A)
-val OnSurface = Color(0xFFE6E1E5)
-val OnSurfaceVariant = Color(0xFFCAC4D0)
+val SurfaceContainerHigh = Color(0xFF282828)
+val OnSurface = Color(0xFFebdbb2)
+val OnSurfaceVariant = Color(0xFFa89984)
 
-// Status colors
-val Success = Color(0xFF4CAF50)
-val Warning = Color(0xFFFFC107)
-val Error = Color(0xFFCF6679)
+// Status colors (Gruvbox)
+val Success = Color(0xFFb8bb26) // Green
+val Warning = Color(0xFFfabd2f) // Yellow
+val Error = Color(0xFFfb4934) // Red
 val OnError = Color(0xFF000000)
-
-// Download progress
-val DownloadProgress = Color(0xFF03DAC6)
-val DownloadComplete = Color(0xFF4CAF50)
