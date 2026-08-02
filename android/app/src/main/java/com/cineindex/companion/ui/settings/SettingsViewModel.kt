@@ -30,7 +30,13 @@ class SettingsViewModel @Inject constructor(
     val isDbLoading: StateFlow<Boolean> = mediaDatabaseProvider.isLoading
 
     init {
-        updateStats()
+        viewModelScope.launch {
+            isDbLoading.collect { loading ->
+                if (!loading) {
+                    updateStats()
+                }
+            }
+        }
     }
 
     fun setDbFolderUri(uri: String) {
@@ -54,7 +60,6 @@ class SettingsViewModel @Inject constructor(
                 appPreferences.setDbFolderUri("")
                 kotlinx.coroutines.delay(100)
                 appPreferences.setDbFolderUri(uri)
-                updateStats()
             }
         } else {
             updateStats()

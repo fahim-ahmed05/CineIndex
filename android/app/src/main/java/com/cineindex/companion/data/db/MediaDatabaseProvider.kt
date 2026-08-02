@@ -32,6 +32,11 @@ class MediaDatabaseProvider {
         close()
         if (!dbFile.exists()) return null
 
+        // Delete existing Room database to force createFromFile to copy the new dbFile
+        context.getDatabasePath("media_readonly").delete()
+        context.getDatabasePath("media_readonly-shm").delete()
+        context.getDatabasePath("media_readonly-wal").delete()
+
         val db = Room.databaseBuilder(
             context.applicationContext,
             MediaDatabase::class.java,

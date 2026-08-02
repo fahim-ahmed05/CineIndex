@@ -140,6 +140,9 @@ class SearchViewModel @Inject constructor(
                 val internalDbFile = File(appContext.filesDir, "media_index.db")
                 val internalRootsFile = File(appContext.filesDir, "roots.json")
 
+                // Close any existing open database before overwriting the file to prevent corruption!
+                mediaDatabaseProvider.close()
+
                 // Copy DB to internal storage
                 appContext.contentResolver.openInputStream(dbDocFile.uri)?.use { input ->
                     internalDbFile.outputStream().use { output ->
