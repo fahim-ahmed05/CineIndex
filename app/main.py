@@ -1570,6 +1570,17 @@ if m:
                 print(f"  Season {{s}}  ({{ep_count}} episode{{'s' if ep_count != 1 else ''}})")
 """
         FZF_SCRIPT_CACHE.write_text(script_code, encoding="utf-8")
+
+        # Rebuild FTS5 full-text search index (used by Android companion app)
+        try:
+            cur = conn.cursor()
+            cur.execute("DELETE FROM media_fts")
+            cur.execute("INSERT INTO media_fts(media_fts) VALUES('rebuild')")
+            conn.commit()
+            print(Fore.GREEN + f"  [OK] FTS5 search index rebuilt.")
+        except Exception as fts_err:
+            print(Fore.YELLOW + f"  [WARN] Could not rebuild FTS5 index: {fts_err}")
+
         print(Fore.GREEN + f"  [OK] Cached {len(rows)} entries for instant FZF search.")
     except Exception as e:
         print(Fore.RED + f"  [FAIL] Could not build FZF cache: {e}")

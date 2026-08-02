@@ -76,6 +76,14 @@ def init_db() -> None:
         cur.execute("CREATE INDEX IF NOT EXISTS idx_media_path     ON media(path)")
         cur.execute("CREATE INDEX IF NOT EXISTS idx_media_filename ON media(filename)")
 
+        # FTS5 full-text search index for instant search (used by Android companion app)
+        cur.execute(
+            """
+            CREATE VIRTUAL TABLE IF NOT EXISTS media_fts
+            USING fts5(filename, path, content=media, content_rowid=rowid)
+            """
+        )
+
         conn.commit()
     finally:
         conn.close()
