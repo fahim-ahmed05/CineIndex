@@ -83,11 +83,13 @@ class SearchViewModel @Inject constructor(
     private suspend fun loadInternalDatabase() {
         kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
             val dbFile = getMediaDatabaseFile()
-            val internalRootsFile = File(appContext.filesDir, "roots.json")
+            val internalRootsFile = getInternalRootsFile()
+
+            // Keep root presentation state in sync even when the database file is missing.
+            rootsConfig.load(internalRootsFile)
 
             if (dbFile.exists()) {
                 try {
-                    if (internalRootsFile.exists()) rootsConfig.load(internalRootsFile)
                     val dao = mediaDatabaseProvider.open(appContext, dbFile)
                     if (dao != null) {
                         searchEngine = SearchEngine(dao)
@@ -101,11 +103,11 @@ class SearchViewModel @Inject constructor(
                     // delete the invalid file to prevent crash loops and reset state.
                     mediaDatabaseProvider.close()
                     deleteDatabaseArtifacts(dbFile)
-                    _dbLoaded.value = false
+                    resetLoadedDatabaseState()
                     return@withContext
                 }
             }
-            _dbLoaded.value = false
+            resetLoadedDatabaseState()
         }
     }
 
@@ -165,7 +167,7 @@ class SearchViewModel @Inject constructor(
                 // After syncing, load it
                 loadInternalDatabase()
             } catch (e: Exception) {
-                _dbLoaded.value = false
+                resetLoadedDatabaseState()
             } finally {
                 mediaDatabaseProvider.setLoading(false)
             }
@@ -203,6 +205,15 @@ class SearchViewModel @Inject constructor(
     }
 
     private fun getMediaDatabaseFile(): File = appContext.getDatabasePath("media_readonly")
+
+    private fun getInternalRootsFile(): File = File(appContext.filesDir, "roots.json")
+
+    private fun resetLoadedDatabaseState() {
+        searchEngine = null
+        _searchResults.value = emptyList()
+        _mediaCount.value = 0
+        _dbLoaded.value = false
+    }
 
     private fun deleteDatabaseArtifacts(dbFile: File) {
         dbFile.delete()
