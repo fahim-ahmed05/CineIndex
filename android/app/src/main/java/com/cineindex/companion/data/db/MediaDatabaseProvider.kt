@@ -1,9 +1,7 @@
 package com.cineindex.companion.data.db
 
 import android.content.Context
-import androidx.room.Room
-import androidx.room.RoomDatabase
-import androidx.sqlite.db.SupportSQLiteDatabase
+import android.database.sqlite.SQLiteDatabase
 import java.io.File
 
 /**
@@ -14,8 +12,8 @@ import java.io.File
  * or migration issues.
  */
 class MediaDatabaseProvider {
-
-    private var database: MediaDatabase? = null
+    private var database: SQLiteDatabase? = null
+    private var dao: MediaDao? = null
     
     private val _isLoading = kotlinx.coroutines.flow.MutableStateFlow(false)
     val isLoading: kotlinx.coroutines.flow.StateFlow<Boolean> = _isLoading
@@ -24,39 +22,33 @@ class MediaDatabaseProvider {
         _isLoading.value = loading
     }
 
-    /**
-     * Open the synced media_readonly database.
-     * Returns null if the file doesn't exist.
-     */
-    fun open(context: Context): MediaDatabase? {
+    fun open(context: Context, dbFile: File): MediaDao? {
         close()
-        val dbFile = context.getDatabasePath("media_readonly")
         if (!dbFile.exists()) return null
 
-        val db = Room.databaseBuilder(
-            context.applicationContext,
-            MediaDatabase::class.java,
-            "media_readonly"
-        )
-            .build()
-
-        database = db
-        return db
+        return try {
+            val db = SQLiteDatabase.openDatabase(
+                dbFile.absolutePath, 
+                null, 
+                SQLiteDatabase.OPEN_READONLY
+            )
+            database = db
+            val mediaDao = MediaDao(db)
+            dao = mediaDao
+            mediaDao
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
     }
 
-    fun getDatabase(): MediaDatabase? = database
+    fun getDao(): MediaDao? {
+        return dao
+    }
 
     fun close() {
         database?.close()
         database = null
+        dao = null
     }
-}
-
-@androidx.room.Database(
-    entities = [MediaEntity::class],
-    version = 1,
-    exportSchema = false
-)
-abstract class MediaDatabase : RoomDatabase() {
-    abstract fun mediaDao(): MediaDao
 }

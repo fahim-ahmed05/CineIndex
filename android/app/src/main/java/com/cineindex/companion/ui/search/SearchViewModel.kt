@@ -95,9 +95,8 @@ class SearchViewModel @Inject constructor(
             if (dbFile.exists()) {
                 try {
                     if (internalRootsFile.exists()) rootsConfig.load(internalRootsFile)
-                    val db = mediaDatabaseProvider.open(appContext)
-                    if (db != null) {
-                        val dao = db.mediaDao()
+                    val dao = mediaDatabaseProvider.open(appContext, dbFile)
+                    if (dao != null) {
                         mediaDao = dao
                         searchEngine = SearchEngine(dao)
                         _mediaCount.value = dao.getCount()
@@ -105,6 +104,7 @@ class SearchViewModel @Inject constructor(
                         return@withContext
                     }
                 } catch (e: Exception) {
+                    android.util.Log.e("CineIndex", "Database load failed", e)
                     // If Room fails to open (e.g. schema mismatch, corruption, missing hash), 
                     // delete the invalid file to prevent crash loops and reset state.
                     mediaDatabaseProvider.close()
@@ -163,18 +163,6 @@ class SearchViewModel @Inject constructor(
                     dbFile.outputStream().use { output ->
                         input.copyTo(output)
                     }
-                }
-
-                // Inject Room identity hash to bypass strict schema verification
-                try {
-                    val db = android.database.sqlite.SQLiteDatabase.openDatabase(
-                        dbFile.absolutePath, null, android.database.sqlite.SQLiteDatabase.OPEN_READWRITE
-                    )
-                    db.execSQL("CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)")
-                    db.execSQL("INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '8497a8cabb471c13a79a102764ebbf8f')")
-                    db.close()
-                } catch (e: Exception) {
-                    e.printStackTrace()
                 }
 
                 if (rootsDocFile != null && rootsDocFile.exists()) {

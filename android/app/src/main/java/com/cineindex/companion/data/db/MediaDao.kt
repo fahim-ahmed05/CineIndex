@@ -1,68 +1,91 @@
 package com.cineindex.companion.data.db
 
-import androidx.room.Dao
-import androidx.room.Query
+import android.database.sqlite.SQLiteDatabase
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 /**
  * Read-only DAO for the synced media_index.db.
- * Uses FTS5 for fast full-text search and standard queries for playlist building.
+ * Uses pure SQLite to avoid strict Room schema verification issues.
  */
-@Dao
-interface MediaDao {
+class MediaDao(private val db: SQLiteDatabase) {
 
-    /**
-     * FTS5-powered search. Matches against filename and path columns.
-     * Caller should format query as FTS5 match syntax (e.g., "breaking* bad*").
-     */
-    @androidx.room.SkipQueryVerification
-    @Query("""
-        SELECT media.* FROM media
-        JOIN media_fts ON media_fts.rowid = media.rowid
-        WHERE media_fts MATCH :query
-        LIMIT :limit
-    """)
-    suspend fun searchFts(query: String, limit: Int = 100): List<MediaEntity>
+    private fun mapCursor(cursor: android.database.Cursor): MediaEntity {
+        return MediaEntity(
+            url = cursor.getString(cursor.getColumnIndexOrThrow("url")),
+            root = cursor.getString(cursor.getColumnIndexOrThrow("root")),
+            path = cursor.getString(cursor.getColumnIndexOrThrow("path")),
+            filename = cursor.getString(cursor.getColumnIndexOrThrow("filename")),
+            modified = cursor.getString(cursor.getColumnIndexOrThrow("modified")),
+            size = cursor.getString(cursor.getColumnIndexOrThrow("size"))
+        )
+    }
 
-    /**
-     * Fallback substring search when FTS5 query syntax fails.
-     */
-    @Query("SELECT * FROM media WHERE filename LIKE '%' || :query || '%' ORDER BY filename LIMIT :limit")
-    suspend fun searchLike(query: String, limit: Int = 100): List<MediaEntity>
+    suspend fun searchFts(query: String, limit: Int = 100): List<MediaEntity> = withContext(Dispatchers.IO) {
+        val list = mutableListOf<MediaEntity>()
+        db.rawQuery(
+            "SELECT media.* FROM media JOIN media_fts ON media_fts.rowid = media.rowid WHERE media_fts MATCH ? LIMIT ?",
+            arrayOf(query, limit.toString())
+        ).use { cursor ->
+            while (cursor.moveToNext()) list.add(mapCursor(cursor))
+        }
+        list
+    }
 
-    /**
-     * Get all media entries in a specific directory path (for same-dir playlist fallback).
-     */
-    @Query("SELECT * FROM media WHERE path = :path ORDER BY filename")
-    suspend fun getByPath(path: String): List<MediaEntity>
+    suspend fun searchLike(query: String, limit: Int = 100): List<MediaEntity> = withContext(Dispatchers.IO) {
+        val list = mutableListOf<MediaEntity>()
+        db.rawQuery(
+            "SELECT * FROM media WHERE filename LIKE '%' || ? || '%' ORDER BY filename LIMIT ?",
+            arrayOf(query, limit.toString())
+        ).use { cursor ->
+            while (cursor.moveToNext()) list.add(mapCursor(cursor))
+        }
+        list
+    }
 
-    /**
-     * Get a single media entry by URL.
-     */
-    @Query("SELECT * FROM media WHERE url = :url")
-    suspend fun getByUrl(url: String): MediaEntity?
+    suspend fun getByPath(path: String): List<MediaEntity> = withContext(Dispatchers.IO) {
+        val list = mutableListOf<MediaEntity>()
+        db.rawQuery("SELECT * FROM media WHERE path = ? ORDER BY filename", arrayOf(path)).use { cursor ->
+            while (cursor.moveToNext()) list.add(mapCursor(cursor))
+        }
+        list
+    }
 
-    /**
-     * Get all media entries for roots sharing the same set of root URLs (cross-root playlist).
-     */
-    @Query("SELECT * FROM media WHERE root IN (:roots)")
-    suspend fun getByRoots(roots: List<String>): List<MediaEntity>
+    suspend fun getByUrl(url: String): MediaEntity? = withContext(Dispatchers.IO) {
+        db.rawQuery("SELECT * FROM media WHERE url = ?", arrayOf(url)).use { cursor ->
+            if (cursor.moveToFirst()) mapCursor(cursor) else null
+        }
+    }
 
-    /**
-     * Get all media entries (for broad library show-name search).
-     * Use with caution on large databases — prefer targeted queries.
-     */
-    @Query("SELECT url, root, path, filename, modified, size FROM media")
-    suspend fun getAll(): List<MediaEntity>
+    suspend fun getByRoots(roots: List<String>): List<MediaEntity> = withContext(Dispatchers.IO) {
+        if (roots.isEmpty()) return@withContext emptyList()
+        val placeholders = roots.joinToString(",") { "?" }
+        val list = mutableListOf<MediaEntity>()
+        db.rawQuery("SELECT * FROM media WHERE root IN ($placeholders)", roots.toTypedArray()).use { cursor ->
+            while (cursor.moveToNext()) list.add(mapCursor(cursor))
+        }
+        list
+    }
 
-    /**
-     * Get distinct root URLs present in the database.
-     */
-    @Query("SELECT DISTINCT root FROM media")
-    suspend fun getRoots(): List<String>
+    suspend fun getAll(): List<MediaEntity> = withContext(Dispatchers.IO) {
+        val list = mutableListOf<MediaEntity>()
+        db.rawQuery("SELECT url, root, path, filename, modified, size FROM media", null).use { cursor ->
+            while (cursor.moveToNext()) list.add(mapCursor(cursor))
+        }
+        list
+    }
 
-    /**
-     * Get total count of indexed media files.
-     */
-    @Query("SELECT COUNT(*) FROM media")
-    suspend fun getCount(): Int
+    suspend fun getRoots(): List<String> = withContext(Dispatchers.IO) {
+        val list = mutableListOf<String>()
+        db.rawQuery("SELECT DISTINCT root FROM media", null).use { cursor ->
+            while (cursor.moveToNext()) list.add(cursor.getString(0))
+        }
+        list
+    }
+
+    suspend fun getCount(): Int = withContext(Dispatchers.IO) {
+        db.rawQuery("SELECT COUNT(*) FROM media", null).use { cursor ->
+            if (cursor.moveToFirst()) cursor.getInt(0) else 0
+        }
+    }
 }

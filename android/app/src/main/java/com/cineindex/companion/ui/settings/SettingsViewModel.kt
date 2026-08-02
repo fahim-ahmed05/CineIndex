@@ -69,9 +69,9 @@ class SettingsViewModel @Inject constructor(
     private fun updateStats() {
         viewModelScope.launch {
             try {
-                val db = mediaDatabaseProvider.getDatabase()
-                if (db != null) {
-                    _mediaCount.value = db.mediaDao().getCount()
+                val dao = mediaDatabaseProvider.getDao()
+                if (dao != null) {
+                    _mediaCount.value = dao.getCount()
                 } else {
                     _mediaCount.value = 0
                 }
