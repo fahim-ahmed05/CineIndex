@@ -10,6 +10,7 @@ import com.cineindex.companion.data.config.RootsConfig
 import com.cineindex.companion.data.db.DownloadDao
 import com.cineindex.companion.data.db.DownloadEntity
 import com.cineindex.companion.data.db.MediaDatabaseProvider
+import com.cineindex.companion.data.db.MediaDao
 import com.cineindex.companion.data.db.MediaEntity
 import com.cineindex.companion.data.search.FilenameUtils
 import com.cineindex.companion.data.search.SearchEngine
@@ -58,6 +59,7 @@ class SearchViewModel @Inject constructor(
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(), false)
 
     private var searchEngine: SearchEngine? = null
+    private var mediaDao: MediaDao? = null
 
     init {
         // Load DB when folder URI is available
@@ -117,6 +119,7 @@ class SearchViewModel @Inject constructor(
             val db = mediaDatabaseProvider.open(appContext, internalDbFile)
             if (db != null) {
                 val dao = db.mediaDao()
+                mediaDao = dao
                 searchEngine = SearchEngine(dao)
                 _mediaCount.value = dao.getCount()
                 _dbLoaded.value = true
@@ -173,7 +176,8 @@ class SearchViewModel @Inject constructor(
     fun playMedia(media: MediaEntity, context: Context) {
         viewModelScope.launch {
             try {
-                val (playlist, startIndex) = playlistBuilder.buildPlaylist(media)
+                val dao = mediaDao ?: return@launch
+                val (playlist, startIndex) = playlistBuilder.buildPlaylist(media, dao)
                 PlayerActivity.launch(context, playlist, startIndex, 0L)
             } catch (e: Exception) {
                 // Ignore for now

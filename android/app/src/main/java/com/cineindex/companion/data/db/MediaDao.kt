@@ -14,6 +14,7 @@ interface MediaDao {
      * FTS5-powered search. Matches against filename and path columns.
      * Caller should format query as FTS5 match syntax (e.g., "breaking* bad*").
      */
+    @androidx.room.SkipQueryVerification
     @Query("""
         SELECT media.* FROM media
         JOIN media_fts ON media_fts.rowid = media.rowid

@@ -91,4 +91,7 @@ dependencies {
 
     // WorkManager
     implementation(libs.androidx.work.runtime.ktx)
+
+    // DocumentFile
+    implementation("androidx.documentfile:documentfile:1.0.1")
 }

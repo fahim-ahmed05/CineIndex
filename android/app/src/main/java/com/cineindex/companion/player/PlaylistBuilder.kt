@@ -13,7 +13,6 @@ import javax.inject.Inject
  * Builds serial episode playlists, porting the logic from the Python TUI's build_dir_playlist().
  */
 class PlaylistBuilder @Inject constructor(
-    private val mediaDao: MediaDao,
     private val rootsConfig: RootsConfig
 ) {
 
@@ -24,7 +23,7 @@ class PlaylistBuilder @Inject constructor(
      *
      * @return Pair containing the playlist of MediaItems and the startIndex of the target.
      */
-    suspend fun buildPlaylist(target: MediaEntity): Pair<List<MediaItem>, Int> {
+    suspend fun buildPlaylist(target: MediaEntity, mediaDao: MediaDao): Pair<List<MediaItem>, Int> {
         val showName = FilenameUtils.extractShowName(target.filename)
         
         // If not an episode, just play the single file
