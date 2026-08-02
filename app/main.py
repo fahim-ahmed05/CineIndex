@@ -31,8 +31,6 @@ from app.media.crawler import (
     crawl_root,
 )
 from app.media.search import (
-    load_media_entries,
-    build_choice_list,
     search_media,
     MediaEntry,
 )
@@ -1850,17 +1848,14 @@ def search_index() -> None:
                     play_entry(entry, conn, root_tags=root_tags_fzf)
             return
 
-        print(Fore.CYAN + "\n[SEARCH] Loading media entries...")
-        entries = load_media_entries(conn)
-        print(Fore.GREEN + f"[SEARCH] Loaded {len(entries)} entries.\n")
-        if not entries:
+        cur = conn.cursor()
+        cur.execute("SELECT 1 FROM media LIMIT 1")
+        if not cur.fetchone():
             print(Fore.YELLOW + "Build the index first.\n")
             return
 
         root_tags = build_root_tag_map()
         root_presentation = build_root_presentation_map()
-
-        choices = build_choice_list(entries)
 
         def render_results(results: list[tuple[MediaEntry, float]]) -> None:
             def _render_row(index: int, row: tuple[MediaEntry, float]) -> list[str]:
@@ -1912,13 +1907,7 @@ def search_index() -> None:
                 print()
                 return
 
-            results = search_media(
-                pattern,
-                entries=entries,
-                choices=choices,
-                limit=50,
-                score_cutoff=40,
-            )
+            results = search_media(conn, pattern, limit=50)
             if not results:
                 print(Fore.RED + "  No matches.\n")
                 last_results = None
@@ -2052,17 +2041,14 @@ def download_index() -> None:
                 print()
                 return
 
-        print(Fore.CYAN + "\n[SEARCH] Loading media entries...")
-        entries = load_media_entries(conn)
-        print(Fore.GREEN + f"[SEARCH] Loaded {len(entries)} entries.\n")
-        if not entries:
+        cur = conn.cursor()
+        cur.execute("SELECT 1 FROM media LIMIT 1")
+        if not cur.fetchone():
             print(Fore.YELLOW + "No media indexed yet. Build the index first.\n")
             return
 
         root_tags = build_root_tag_map()
         root_presentation = build_root_presentation_map()
-
-        choices = build_choice_list(entries)
 
         while True:
             pattern = input(
@@ -2072,9 +2058,7 @@ def download_index() -> None:
                 print()
                 return
 
-            results = search_media(
-                pattern, entries=entries, choices=choices, limit=50, score_cutoff=40
-            )
+            results = search_media(conn, pattern, limit=50)
             if not results:
                 print(Fore.RED + "  No matches.\n")
                 continue
