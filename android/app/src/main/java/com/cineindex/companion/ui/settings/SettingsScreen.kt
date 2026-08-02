@@ -103,9 +103,9 @@ fun SettingsScreen(
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Column {
-                    val isDbLoading by viewModel.isDbLoading.collectAsStateWithLifecycle()
+                val isDbLoading by viewModel.isDbLoading.collectAsStateWithLifecycle()
 
+                Column {
                     SettingItem(
                         icon = { 
                             if (isDbLoading) {

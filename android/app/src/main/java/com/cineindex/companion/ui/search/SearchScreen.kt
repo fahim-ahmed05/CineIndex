@@ -44,6 +44,7 @@ fun SearchScreen(
     val mediaCount by viewModel.mediaCount.collectAsStateWithLifecycle()
     val dbLoaded by viewModel.dbLoaded.collectAsStateWithLifecycle()
     val history by historyViewModel.history.collectAsStateWithLifecycle()
+    val listState = androidx.compose.foundation.lazy.rememberLazyListState()
 
     Column(
         modifier = Modifier
@@ -104,7 +105,6 @@ fun SearchScreen(
         }
 
         // Main content area
-        val listState = androidx.compose.foundation.lazy.rememberLazyListState()
         LaunchedEffect(listState.isScrollInProgress) {
             if (listState.isScrollInProgress) {
                 focusManager.clearFocus()
