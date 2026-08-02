@@ -16,6 +16,13 @@ import java.io.File
 class MediaDatabaseProvider {
 
     private var database: MediaDatabase? = null
+    
+    private val _isLoading = kotlinx.coroutines.flow.MutableStateFlow(false)
+    val isLoading: kotlinx.coroutines.flow.StateFlow<Boolean> = _isLoading
+
+    fun setLoading(loading: Boolean) {
+        _isLoading.value = loading
+    }
 
     /**
      * Open the synced media_index.db at the given path.

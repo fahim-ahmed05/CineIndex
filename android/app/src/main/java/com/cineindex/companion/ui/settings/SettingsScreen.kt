@@ -101,11 +101,23 @@ fun SettingsScreen(
                 modifier = Modifier.padding(start = 16.dp, top = 8.dp, bottom = 8.dp)
             )
 
+            val isDbLoading by viewModel.isDbLoading.collectAsStateWithLifecycle()
+
             SettingItem(
-                icon = { Icon(Icons.Filled.Refresh, contentDescription = null) },
+                icon = { 
+                    if (isDbLoading) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(24.dp),
+                            color = MaterialTheme.colorScheme.primary,
+                            strokeWidth = 2.dp
+                        )
+                    } else {
+                        Icon(Icons.Filled.Refresh, contentDescription = null)
+                    }
+                },
                 title = "Reload Database",
-                subtitle = "Force reload from the database folder",
-                onClick = { viewModel.reloadDatabase() }
+                subtitle = if (isDbLoading) "Loading database..." else "Force reload from the database folder",
+                onClick = { if (!isDbLoading) viewModel.reloadDatabase() }
             )
 
             SettingItem(

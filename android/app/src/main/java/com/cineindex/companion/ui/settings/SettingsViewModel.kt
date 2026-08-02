@@ -27,6 +27,8 @@ class SettingsViewModel @Inject constructor(
     private val _mediaCount = MutableStateFlow(0)
     val mediaCount: StateFlow<Int> = _mediaCount
 
+    val isDbLoading: StateFlow<Boolean> = mediaDatabaseProvider.isLoading
+
     init {
         updateStats()
     }
