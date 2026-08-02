@@ -24,11 +24,11 @@ val OnSecondaryContainer = Color(0xFFA0F0E4)
 val Tertiary = Color(0xFFEFB8C8)
 val TertiaryContainer = Color(0xFF633B48)
 
-// Surface / Background
-val Surface = Color(0xFF121212)
-val SurfaceVariant = Color(0xFF1E1E1E)
-val SurfaceContainer = Color(0xFF1A1A2E)
-val SurfaceContainerHigh = Color(0xFF252540)
+// Surface / Background (AMOLED Black)
+val Surface = Color(0xFF000000)
+val SurfaceVariant = Color(0xFF121212)
+val SurfaceContainer = Color(0xFF000000)
+val SurfaceContainerHigh = Color(0xFF1A1A1A)
 val OnSurface = Color(0xFFE6E1E5)
 val OnSurfaceVariant = Color(0xFFCAC4D0)
 
