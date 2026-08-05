@@ -1215,6 +1215,94 @@ def play_entry(
     print(Fore.GREEN + "[PLAY] mpv exited.\n")
 
 
+def play_entries(
+    entries: list[MediaEntry], conn, root_tags: dict[str, str] | None = None
+) -> None:
+    """
+    Play one or more media entries in mpv.
+    If a single entry is provided, defers to play_entry (which handles series expansion).
+    If multiple entries are provided, queues all selected items into a single playlist.
+    """
+    if not entries:
+        return
+    if len(entries) == 1:
+        play_entry(entries[0], conn, root_tags=root_tags)
+        return
+
+    valid_entries: list[MediaEntry] = []
+    for e in entries:
+        if check_file_accessible(e.url):
+            valid_entries.append(e)
+        else:
+            print(Fore.YELLOW + f"[PLAY] Skipping inaccessible file: {e.filename}")
+
+    if not valid_entries:
+        print(Fore.RED + "[PLAY] Error: None of the selected files are accessible.\n")
+        return
+
+    script_path = HERE / "cineindex-history.lua"
+    script_arg = f"--script={script_path.as_posix()}" if script_path.exists() else None
+
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    history_file = DATA_DIR / "cineindex-mpv-events.log"
+
+    env = os.environ.copy()
+    env["CINEINDEX_HISTORY_PATH"] = str(history_file)
+
+    cfg = load_config()
+    mpv_args = cfg.get("mpv_args", [])
+    if not isinstance(mpv_args, list):
+        mpv_args = []
+
+    _, root_presentation = build_root_maps()
+
+    try:
+        with tempfile.NamedTemporaryFile(
+            delete=False, suffix=".m3u", mode="w", encoding="utf-8"
+        ) as f:
+            playlist_path = f.name
+            f.write("#EXTM3U\n")
+            for e in valid_entries:
+                title = _pretty_filename(
+                    e.filename,
+                    dots_to_spaces=bool(
+                        root_presentation.get(e.root, {}).get("dots_to_spaces", False)
+                    ),
+                )
+                f.write(f"#EXTINF:0,{title}\n{e.url}\n")
+    except Exception as e:
+        print(Fore.RED + f"  !! Failed to create playlist file: {e}")
+        return
+
+    cmd = ["mpv", *mpv_args]
+    if script_arg:
+        cmd.append(script_arg)
+    cmd.append(f"--playlist={playlist_path}")
+
+    print(
+        Fore.CYAN
+        + f"\n[PLAY] Queueing {len(valid_entries)} items in mpv: "
+        + Fore.YELLOW
+        + " ".join(cmd)
+    )
+    try:
+        subprocess.run(cmd, env=env)
+    except FileNotFoundError:
+        print(
+            Fore.RED
+            + "  !! mpv not found. Make sure it's in PATH or adjust the command."
+        )
+    except Exception as e:
+        print(Fore.RED + f"  !! Error launching mpv: {e}")
+    finally:
+        try:
+            os.remove(playlist_path)
+        except OSError:
+            pass
+
+    print(Fore.GREEN + "[PLAY] mpv exited.\n")
+
+
 # ---------- aria2c downloader ----------
 
 
@@ -1831,6 +1919,53 @@ def _get_media_by_url(conn, url: str) -> MediaEntry | None:
     return None
 
 
+def _get_media_by_urls(conn, urls: list[str]) -> list[MediaEntry]:
+    """Look up multiple media entries by URL preserving the original requested order."""
+    if not urls:
+        return []
+    placeholders = ",".join("?" * len(urls))
+    cur = conn.cursor()
+    cur.execute(
+        f"SELECT url, root, path, filename, size, modified FROM media WHERE url IN ({placeholders})",
+        urls,
+    )
+    by_url = {
+        r["url"]: MediaEntry(
+            url=r["url"],
+            root=r["root"],
+            path=r["path"],
+            filename=r["filename"],
+            size=r["size"],
+            modified=r["modified"],
+        )
+        for r in cur.fetchall()
+    }
+    result = []
+    for u in urls:
+        if u in by_url:
+            result.append(by_url[u])
+    return result
+
+
+def _parse_selection_indices(input_str: str, max_val: int) -> list[int]:
+    """
+    Parse selection string (e.g. '1', '1 5 7', or '1, 5, 7').
+    Returns 0-based indices for valid, in-range selections preserving user order.
+    """
+    raw_tokens = re.split(r"[\s,]+", input_str.strip())
+    indices: list[int] = []
+    seen = set()
+    for tok in raw_tokens:
+        if not tok:
+            continue
+        if tok.isdigit():
+            val = int(tok)
+            if 1 <= val <= max_val and val not in seen:
+                seen.add(val)
+                indices.append(val - 1)
+    return indices
+
+
 def search_index() -> None:
     init_db()
     conn = get_conn()
@@ -1844,20 +1979,20 @@ def search_index() -> None:
 
             print(
                 Fore.CYAN
-                + "[SEARCH] Using fzf picker. Type to filter, Enter to select, ? for preview, Esc to exit.\n"
+                + "[SEARCH] Using fzf picker. Type to filter, Tab/Shift-Tab to select multiple, Enter to play, ? for preview, Esc to exit.\n"
             )
 
             while True:
                 picked_urls, last_query = _fzf_pick_media(
-                    None, None, None, prompt="Search: ", initial_query=last_query
+                    None, None, None, prompt="Search: ", multi=True, initial_query=last_query
                 )
                 if not picked_urls:
                     print()
                     return
-                entry = _get_media_by_url(conn, picked_urls[0])
-                if entry:
+                entries = _get_media_by_urls(conn, picked_urls)
+                if entries:
                     root_tags_fzf = build_root_tag_map()
-                    play_entry(entry, conn, root_tags=root_tags_fzf)
+                    play_entries(entries, conn, root_tags=root_tags_fzf)
             return
 
         cur = conn.cursor()
@@ -1890,25 +2025,18 @@ def search_index() -> None:
                 # Same selection loop, but returns to query when ENTER is pressed.
                 while True:
                     sel = input(
-                        Fore.CYAN + "Select number to play (ENTER to search again): "
+                        Fore.CYAN + "Select number(s) to play (e.g. 1 or 1 5 7, ENTER to search again): "
                     ).strip()
                     if not sel:
                         print()
                         last_results = None  # abandon sticky results; go to new search
                         break
-                    if not sel.isdigit():
+                    indices = _parse_selection_indices(sel, max_val=len(last_results))
+                    if not indices:
                         print(Fore.RED + "  Invalid selection.\n")
                         continue
-                    num = int(sel)
-                    if last_results is None:
-                        break
-                    if not (1 <= num <= len(last_results)):
-                        print(Fore.RED + "  Out of range.\n")
-                        continue
-                    entry, _ = last_results[
-                        num - 1
-                    ]  # pylint: disable=unsubscriptable-object
-                    play_entry(entry, conn, root_tags=root_tags)
+                    selected_entries = [last_results[i][0] for i in indices]
+                    play_entries(selected_entries, conn, root_tags=root_tags)
                     # After mpv exits, we simply loop and re-render the same list again.
 
             # New search
@@ -1932,21 +2060,18 @@ def search_index() -> None:
 
             while True:
                 sel = input(
-                    Fore.CYAN + "Select number to play (ENTER to search again): "
+                    Fore.CYAN + "Select number(s) to play (e.g. 1 or 1 5 7, ENTER to search again): "
                 ).strip()
                 if not sel:
                     print()
                     last_results = None  # abandon sticky list, go back to query prompt
                     break
-                if not sel.isdigit():
+                indices = _parse_selection_indices(sel, max_val=len(results))
+                if not indices:
                     print(Fore.RED + "  Invalid selection.\n")
                     continue
-                num = int(sel)
-                if not (1 <= num <= len(results)):
-                    print(Fore.RED + "  Out of range.\n")
-                    continue
-                entry, _ = results[num - 1]
-                play_entry(entry, conn, root_tags=root_tags)
+                selected_entries = [results[i][0] for i in indices]
+                play_entries(selected_entries, conn, root_tags=root_tags)
                 # Do not break: we keep showing the same results for more selections
 
     finally:
@@ -1972,13 +2097,14 @@ def show_history() -> None:
         if _fzf_binary():
             print(
                 Fore.CYAN
-                + "[SEARCH] Using fzf picker. Type to filter, Enter to select, ? for preview, Esc to exit.\n"
+                + "[SEARCH] Using fzf picker. Type to filter, Tab/Shift-Tab to select multiple, Enter to play, ? for preview, Esc to exit.\n"
             )
             picked, _ = _fzf_pick_media(
-                history, root_tags, root_presentation, prompt="Search: "
+                history, root_tags, root_presentation, prompt="Search: ", multi=True
             )
             if picked:
-                play_entry(picked[0][0], conn, root_tags=root_tags)
+                entries = [p[0] if isinstance(p, tuple) else p for p in picked]
+                play_entries(entries, conn, root_tags=root_tags)
             print()
             return
 
@@ -1996,19 +2122,16 @@ def show_history() -> None:
 
         print()
         while True:
-            sel = input(Fore.CYAN + "Select number to play (ENTER to return): ").strip()
+            sel = input(Fore.CYAN + "Select number(s) to play (e.g. 1 or 1 5 7, ENTER to return): ").strip()
             if not sel:
                 print()
                 break
-            if not sel.isdigit():
+            indices = _parse_selection_indices(sel, max_val=len(history))
+            if not indices:
                 print(Fore.RED + "  Invalid selection.\n")
                 continue
-            num = int(sel)
-            if not (1 <= num <= len(history)):
-                print(Fore.RED + "  Out of range.\n")
-                continue
-            entry, _ = history[num - 1]
-            play_entry(entry, conn, root_tags=root_tags)
+            selected_entries = [history[i][0] for i in indices]
+            play_entries(selected_entries, conn, root_tags=root_tags)
             break
     finally:
         conn.close()
