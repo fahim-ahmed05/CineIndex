@@ -5,6 +5,7 @@ import os
 import re
 import shutil
 import subprocess
+import sys
 import tempfile
 from pathlib import Path
 import socket
@@ -789,7 +790,7 @@ else:
                 preview_script = ps.name
 
             # Add preview command; the script reads the selected row from argv.
-            cmd.extend(["--preview", f"python {preview_script} {{}}"])
+            cmd.extend(["--preview", f'"{sys.executable}" {preview_script} {{}}'])
         except Exception:
             pass  # Silently skip preview on error
 
@@ -816,7 +817,7 @@ else:
         if preview_script:
             # Escape backslashes for Windows shell and add preview with toggle binding
             preview_script_escaped = preview_script.replace("\\", "\\\\")
-            preview_part = f'--preview "python {preview_script_escaped} {{}}" --preview-window=hidden,wrap --bind "?:toggle-preview" '
+            preview_part = f'--preview "\"{sys.executable}\" {preview_script_escaped} {{}}" --preview-window=hidden,wrap --bind "?:toggle-preview" '
 
         redirect_cmd = (
             f'"{fzf_bin}" --ansi --delimiter "\t" --with-nth "2,3,4" '
@@ -1738,7 +1739,7 @@ def _fzf_pick_persistent(
         multi_part = "--multi " if multi else ""
 
         preview_script_escaped = FZF_SCRIPT_CACHE.as_posix().replace("\\", "\\\\")
-        preview_part = f'--preview "python {preview_script_escaped} {{}}" --preview-window=hidden,wrap --bind "?:toggle-preview" '
+        preview_part = f'--preview "\"{sys.executable}\" {preview_script_escaped} {{}}" --preview-window=hidden,wrap --bind "?:toggle-preview" '
 
         redirect_cmd = (
             f'"{fzf_bin}" --ansi --delimiter "\t" --with-nth "2" '
