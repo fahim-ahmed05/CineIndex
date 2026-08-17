@@ -154,14 +154,6 @@ fun SearchScreen(
                         },
                     contentPadding = PaddingValues(vertical = 4.dp)
                 ) {
-                    item {
-                        Text(
-                            text = "Recent Activity",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-                        )
-                    }
                     items(items = history, key = { it.url }) { item ->
                         MediaResultItem(
                             title = item.filename,
