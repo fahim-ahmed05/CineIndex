@@ -24,7 +24,7 @@ class MediaDao(private val db: SQLiteDatabase) {
     suspend fun searchFts(query: String, limit: Int = 100): List<MediaEntity> = withContext(Dispatchers.IO) {
         val list = mutableListOf<MediaEntity>()
         db.rawQuery(
-            "SELECT media.* FROM media JOIN media_fts ON media_fts.rowid = media.rowid WHERE media_fts MATCH ? LIMIT ?",
+            "SELECT media.* FROM media JOIN media_fts ON media_fts.rowid = media.rowid WHERE media_fts MATCH ? ORDER BY rank, media.filename LIMIT ?",
             arrayOf(query, limit.toString())
         ).use { cursor ->
             while (cursor.moveToNext()) list.add(mapCursor(cursor))
@@ -35,7 +35,7 @@ class MediaDao(private val db: SQLiteDatabase) {
     suspend fun searchLike(query: String, limit: Int = 100): List<MediaEntity> = withContext(Dispatchers.IO) {
         val list = mutableListOf<MediaEntity>()
         db.rawQuery(
-            "SELECT * FROM media WHERE filename LIKE '%' || ? || '%' ORDER BY filename LIMIT ?",
+            "SELECT * FROM media WHERE filename LIKE '%' || ? || '%' ORDER BY LENGTH(filename), filename LIMIT ?",
             arrayOf(query, limit.toString())
         ).use { cursor ->
             while (cursor.moveToNext()) list.add(mapCursor(cursor))
