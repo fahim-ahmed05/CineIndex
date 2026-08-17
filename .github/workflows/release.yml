@@ -26,7 +26,16 @@ jobs:
 
       - name: Build Release APK
         run: cd android && ./gradlew assembleRelease
-        # Note: By default, this builds an unsigned or debug-signed release APK unless signing configs are provided.
+
+      - name: Sign Release APK
+        uses: r0adkll/sign-android-release@v1
+        id: sign_app
+        with:
+          releaseDirectory: android/app/build/outputs/apk/release
+          signingKeyBase64: ${{ secrets.SIGNING_KEY }}
+          alias: ${{ secrets.ALIAS }}
+          keyStorePassword: ${{ secrets.KEY_STORE_PASSWORD }}
+          keyPassword: ${{ secrets.KEY_PASSWORD }}
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
@@ -34,7 +43,7 @@ jobs:
           name: cineindex-apks
           path: |
             android/app/build/outputs/apk/debug/*.apk
-            android/app/build/outputs/apk/release/*.apk
+            ${{steps.sign_app.outputs.signedReleaseFile}}
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
@@ -43,6 +52,6 @@ jobs:
           name: Latest Release
           files: |
             android/app/build/outputs/apk/debug/*.apk
-            android/app/build/outputs/apk/release/*.apk
+            ${{steps.sign_app.outputs.signedReleaseFile}}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
