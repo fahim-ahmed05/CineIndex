@@ -544,11 +544,11 @@ def _pick_with_fzf(
     all_entries: list[T] | None = None,
     root_tags: dict[str, str] | None = None,
     root_presentation: dict[str, dict] | None = None,
-) -> tuple[list[T], str]:
+) -> tuple[list[T], str, T | None]:
 
     fzf_bin = _fzf_binary()
     if not fzf_bin or not items:
-        return [], initial_query or ""
+        return [], initial_query or "", None
 
     index_lookup: dict[str, T] = {}
     lines: list[str] = []
@@ -819,6 +819,15 @@ else:
             preview_script_escaped = preview_script.replace("\\", "\\\\")
             preview_part = f'--preview "\"{sys.executable}\" {preview_script_escaped} {{}}" --preview-window=hidden,wrap --bind "?:toggle-preview" '
 
+        focus_file = output_file + ".focus"
+        focus_script_path = Path(output_file).parent / "fzf_focus.py"
+        if not focus_script_path.exists():
+            focus_script_path.write_text("import sys\nopen(sys.argv[1], 'w', encoding='utf-8').write(sys.argv[2])\n", encoding="utf-8")
+        focus_script_escaped = focus_script_path.as_posix().replace("\\", "\\\\")
+        focus_file_escaped = focus_file.replace("\\", "\\\\")
+        
+        bind_part = f'--bind "enter:execute-silent(\\"{sys.executable}\\" {focus_script_escaped} \\"{focus_file_escaped}\\" {{}})+accept" '
+
         redirect_cmd = (
             f'"{fzf_bin}" --ansi --delimiter "\t" --with-nth "2,3,4" '
             f'--prompt "{prompt}" --height 70% --border --layout=reverse '
@@ -826,31 +835,33 @@ else:
             + print_query
             + multi_part
             + preview_part
+            + bind_part
             + f'< "{input_file}" > "{output_file}"'
         )
 
         proc = subprocess.run(redirect_cmd, shell=True)
         if proc.returncode != 0:
-            return [], initial_query or ""
+            return [], initial_query or "", None
 
         try:
             selected_text = Path(output_file).read_text(encoding="utf-8")
         except OSError:
-            return [], initial_query or ""
+            return [], initial_query or "", None
 
         if not selected_text.strip():
-            return [], initial_query or ""
+            return [], initial_query or "", None
     except Exception as e:
         print(
             Fore.YELLOW
             + f"[SEARCH] fzf unavailable, falling back to the built-in picker: {e}"
         )
-        return [], initial_query or ""
+        return [], initial_query or "", None
     finally:
-        for temp_path in (input_file, output_file, preview_file, preview_script):
+        for temp_path in (input_file, output_file, preview_file, preview_script, output_file + ".focus" if output_file else None):
             if temp_path:
                 try:
-                    os.remove(temp_path)
+                    if isinstance(temp_path, str) and os.path.exists(temp_path):
+                        os.remove(temp_path)
                 except OSError:
                     pass
 
@@ -864,12 +875,23 @@ else:
         idx = line.split("\t", 1)[0].strip()
         if not idx or idx in seen:
             continue
-        if idx not in index_lookup:
-            continue
-        seen.add(idx)
-        selected.append(index_lookup[idx])
+        if idx in index_lookup:
+            selected.append(index_lookup[idx])
+            seen.add(idx)
 
-    return selected, last_query
+    focused_item = None
+    try:
+        focus_file = output_file + ".focus"
+        if os.path.exists(focus_file):
+            focused_line = Path(focus_file).read_text(encoding="utf-8")
+            if focused_line:
+                idx = focused_line.split("\t", 1)[0].strip()
+                if idx in index_lookup:
+                    focused_item = index_lookup[idx]
+    except Exception:
+        pass
+
+    return selected, last_query, focused_item
 
 
 # ---------- Playlist helpers (series handling) ----------
@@ -1216,7 +1238,7 @@ def play_entry(
 
 
 def play_entries(
-    entries: list[MediaEntry], conn, root_tags: dict[str, str] | None = None
+    entries: list[MediaEntry], conn, root_tags: dict[str, str] | None = None, focused_url: str | None = None
 ) -> None:
     """
     Play one or more media entries in mpv.
@@ -1278,6 +1300,11 @@ def play_entries(
     if script_arg:
         cmd.append(script_arg)
     cmd.append(f"--playlist={playlist_path}")
+
+    if focused_url:
+        start_index = next((i for i, e in enumerate(valid_entries) if e.url == focused_url), 0)
+        if start_index > 0:
+            cmd.append(f"--playlist-start={start_index}")
 
     print(
         Fore.CYAN
@@ -1810,10 +1837,10 @@ def show_stats() -> None:
 
 def _fzf_pick_persistent(
     prompt: str, multi: bool = False, initial_query: str = ""
-) -> tuple[list[str], str]:
+) -> tuple[list[str], str, str | None]:
     fzf_bin = _fzf_binary()
     if not fzf_bin or not FZF_INPUT_CACHE.exists() or not FZF_SCRIPT_CACHE.exists():
-        return [], initial_query
+        return [], initial_query, None
 
     output_file = None
     try:
@@ -1829,6 +1856,15 @@ def _fzf_pick_persistent(
         preview_script_escaped = FZF_SCRIPT_CACHE.as_posix().replace("\\", "\\\\")
         preview_part = f'--preview "\"{sys.executable}\" {preview_script_escaped} {{}}" --preview-window=hidden,wrap --bind "?:toggle-preview" '
 
+        focus_file = output_file + ".focus"
+        focus_script_path = FZF_SCRIPT_CACHE.parent / "fzf_focus.py"
+        if not focus_script_path.exists():
+            focus_script_path.write_text("import sys\nopen(sys.argv[1], 'w', encoding='utf-8').write(sys.argv[2])\n", encoding="utf-8")
+        focus_script_escaped = focus_script_path.as_posix().replace("\\", "\\\\")
+        focus_file_escaped = focus_file.replace("\\", "\\\\")
+        
+        bind_part = f'--bind "enter:execute-silent(\\"{sys.executable}\\" {focus_script_escaped} \\"{focus_file_escaped}\\" {{}})+accept" '
+
         redirect_cmd = (
             f'"{fzf_bin}" --ansi --delimiter "\t" --with-nth "2" '
             f'--prompt "{prompt}" --height 70% --border --layout=reverse '
@@ -1836,20 +1872,21 @@ def _fzf_pick_persistent(
             + print_query
             + multi_part
             + preview_part
+            + bind_part
             + f'< "{FZF_INPUT_CACHE}" > "{output_file}"'
         )
 
         proc = subprocess.run(redirect_cmd, shell=True)
         if proc.returncode != 0:
-            return [], initial_query
+            return [], initial_query, None
 
         try:
             selected_text = Path(output_file).read_text(encoding="utf-8")
         except OSError:
-            return [], initial_query
+            return [], initial_query, None
 
         if not selected_text.strip():
-            return [], initial_query
+            return [], initial_query, None
 
         lines_out = selected_text.splitlines()
         last_query = lines_out[0] if lines_out else ""
@@ -1860,13 +1897,26 @@ def _fzf_pick_persistent(
                 # The URL is always the 3rd column (index 2) in the generated TSV.
                 selected.append(parts[2].strip())
 
-        return selected, last_query
+        focused_url = None
+        try:
+            focus_file = output_file + ".focus"
+            if os.path.exists(focus_file):
+                focused_line = Path(focus_file).read_text(encoding="utf-8")
+                if focused_line:
+                    f_parts = focused_line.split("\t")
+                    if len(f_parts) >= 3:
+                        focused_url = f_parts[2].strip()
+        except Exception:
+            pass
+
+        return selected, last_query, focused_url
     finally:
-        if output_file:
-            try:
-                os.remove(output_file)
-            except OSError:
-                pass
+        for temp_path in (output_file, output_file + ".focus" if output_file else None):
+            if temp_path:
+                try:
+                    os.remove(temp_path)
+                except OSError:
+                    pass
 
 
 def _fzf_pick_media(
@@ -1876,7 +1926,7 @@ def _fzf_pick_media(
     prompt: str,
     multi: bool = False,
     initial_query: str = "",
-) -> tuple[list, str]:
+) -> tuple:
     if entries is None:
         return _fzf_pick_persistent(
             prompt=prompt, multi=multi, initial_query=initial_query
@@ -1983,7 +2033,7 @@ def search_index() -> None:
             )
 
             while True:
-                picked_urls, last_query = _fzf_pick_media(
+                picked_urls, last_query, focused_url = _fzf_pick_media(
                     None, None, None, prompt="Search: ", multi=True, initial_query=last_query
                 )
                 if not picked_urls:
@@ -1992,7 +2042,7 @@ def search_index() -> None:
                 entries = _get_media_by_urls(conn, picked_urls)
                 if entries:
                     root_tags_fzf = build_root_tag_map()
-                    play_entries(entries, conn, root_tags=root_tags_fzf)
+                    play_entries(entries, conn, root_tags=root_tags_fzf, focused_url=focused_url)
             return
 
         cur = conn.cursor()
@@ -2099,12 +2149,15 @@ def show_history() -> None:
                 Fore.CYAN
                 + "[SEARCH] Using fzf picker. Type to filter, Tab/Shift-Tab to select multiple, Enter to play, ? for preview, Esc to exit.\n"
             )
-            picked, _ = _fzf_pick_media(
+            picked, _, focused_item = _fzf_pick_media(
                 history, root_tags, root_presentation, prompt="Search: ", multi=True
             )
             if picked:
-                entries = [p[0] if isinstance(p, tuple) else p for p in picked]
-                play_entries(entries, conn, root_tags=root_tags)
+                def unwrap(e):
+                    return e[0] if isinstance(e, tuple) else e
+                entries = [unwrap(p) for p in picked]
+                focused_url = unwrap(focused_item).url if focused_item else None
+                play_entries(entries, conn, root_tags=root_tags, focused_url=focused_url)
             print()
             return
 
@@ -2157,7 +2210,7 @@ def download_index() -> None:
             )
 
             while True:
-                picked_urls, last_query = _fzf_pick_media(
+                picked_urls, last_query, _ = _fzf_pick_media(
                     None,
                     None,
                     None,
