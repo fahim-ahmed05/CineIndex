@@ -35,8 +35,8 @@ class MediaDao(private val db: SQLiteDatabase) {
     suspend fun searchLike(query: String, limit: Int = 100): List<MediaEntity> = withContext(Dispatchers.IO) {
         val list = mutableListOf<MediaEntity>()
         db.rawQuery(
-            "SELECT * FROM media WHERE filename LIKE '%' || ? || '%' ORDER BY LENGTH(filename), filename LIMIT ?",
-            arrayOf(query, limit.toString())
+            "SELECT * FROM media WHERE filename LIKE '%' || ? || '%' ORDER BY CASE WHEN filename LIKE ? || '%' THEN 0 WHEN filename LIKE '% ' || ? || '%' THEN 1 WHEN filename LIKE '%_' || ? || '%' THEN 1 ELSE 2 END, LENGTH(filename), filename LIMIT ?",
+            arrayOf(query, query, query, query, limit.toString())
         ).use { cursor ->
             while (cursor.moveToNext()) list.add(mapCursor(cursor))
         }
